@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
+from datetime import datetime
 from statsmodels.tsa.stattools import adfuller, acf, pacf
 import statsmodels.api as sm
 from statsmodels.tsa.arima.model import ARIMA
@@ -117,19 +118,45 @@ class TimeSeries:
         else:
             return True
 
+def test_stationarity(timeseries):
+    #Determing rolling statistics
+    rolmean = timeseries.rolling(window=12).mean()
+    rolstd = timeseries.rolling(window=12).std()
+
+    #Plot rolling statistics:
+    orig = plt.plot(timeseries, color='blue',label='Original')
+    mean = plt.plot(rolmean, color='red', label='Rolling Mean')
+    std = plt.plot(rolstd, color='black', label = 'Rolling Std')
+    plt.legend(loc='best')
+    plt.title('Rolling Mean & Standard Deviation')
+    plt.show()
+    
+    #Perform Dickey-Fuller test:
+    print('Results of Dickey-Fuller Test:')
+    dftest = adfuller(timeseries, autolag='AIC')
+    dfoutput = pd.Series(dftest[0:4], index=['Test Statistic','p-value','#Lags Used','Number of Observations Used'])
+    for key,value in dftest[4].items():
+        dfoutput['Critical Value (%s)'%key] = value
+    print(dfoutput)
 
 def main():
+    '''
+    1. 拔掉 outlier 
+    2. train-test
+    3. cluster(目前資料怎麼做)
+    4. data 要重新抓
+    '''
     low, sales_data, sales_all = read_data()
 
     weekly_sales = {}
     for k, v in sales_data.items():
-        sales_data[k] = fill_daily_na(agg_daily_data(sales_data[k]))
-        sales_data[k], weekly_sales[k] = agg_weekly_data(sales_data[k])
+        sales_data[k] = fill_daily_na(agg_daily_data(sales_data[k]))  # 補沒有販售的時間點
+        sales_data[k], weekly_sales[k] = agg_weekly_data(sales_data[k]) # 整理成週
         sales_data[k].set_index('SlipDate', inplace=True)
 
     sales_all = fill_daily_na(agg_daily_data(sales_all))
     sales_all.set_index('SlipDate', inplace=True)
-
+    
     ts_test = TimeSeries(sales_all['數量'])
     ts_test.ACF_PACF()
     d = ts_test.ADF_test(None)
