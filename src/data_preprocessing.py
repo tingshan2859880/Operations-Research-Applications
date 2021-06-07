@@ -2,11 +2,23 @@ from datetime import datetime
 import pandas as pd
 import os
 import numpy as np
+from sklearn.cluster import KMeans
 
 from dir_config import DirConfig
+path = DirConfig()
+# train test
+def cluster(transaction_data):
+    transaction_data['建議售價'] = transaction_data['建議售價'].apply(str)
+    transaction_data['group_name'] = transaction_data[['品牌', '性別', '建議售價']].agg('-'.join, axis=1)
+    ttl_num_df = transaction_data[['group_name','數量', '單據日期']].groupby(['group_name']).agg({'數量':['count', 'sum'], '單據日期':['min', 'max']}).reset_index()
+    ttl_num_df['販售時間'] = (ttl_num_df['單據日期']['max'] - ttl_num_df['單據日期']['min']).dt.days
+    X = ttl_num_df[['數量', '販售時間']].values
+    kmeans = KMeans(n_clusters=3, random_state=0).fit(X)
+    ttl_num_df['cluster_kind'] =  kmeans.labels_
+    print(ttl_num_df)
+
 
 # old
-
 def read_new_traffic(update=True, use_old=False):
     """
     讀取新的（202010-202102）流量資料
@@ -151,13 +163,11 @@ def read_data(channel=['A', 'B', 'C'])->(dict, dict, pd.DataFrame):
     '''
     flow = {}
     sales_data = {}
-    sales_all = pd.read_excel(os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), 'data', 'Sales_data.xlsx'))
+    sales_all = pd.read_excel(path.to_an_file('Sales_data.xlsx'))
     for c in channel:
-        flow[c] = pd.read_excel(os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), 'data', c+'_流量資料.xlsx'))
+        flow[c] = pd.read_excel(path.to_an_file(c+'_流量資料.xlsx'))
 
-        sales_data[c] = sales_all.loc[sales_all['CustCode'] == c]
+        sales_data[c] = sales_all.loc[sales_all['客戶名稱'] == c]
 
     return flow, sales_data, sales_all
 
@@ -218,4 +228,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    flow_dic, trans_dic, trans_data = read_data()
+    cluster(trans_data)
