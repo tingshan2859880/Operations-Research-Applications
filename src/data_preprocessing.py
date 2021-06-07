@@ -1,10 +1,12 @@
 from datetime import datetime
+from scipy.stats.mstats import winsorize
 import pandas as pd
 import os
 import numpy as np
+from hampel import hampel
 
 
-def read_data(channel=['A', 'B', 'C'])->(dict, dict, pd.DataFrame):
+def read_data(channel=['A', 'B', 'C']):
     '''
     read channel data
     '''
@@ -62,6 +64,20 @@ def agg_weekly_data(data):
         index='week', aggfunc={'單價': np.mean, '數量': np.sum})
 
     return data, weekly_data
+
+
+def remove_outlier(data: list, method='winsorizie'):
+    """
+    移除 data 裡面的 Outlier
+        Args:
+            data: 一個 list 的 資料，可以偵測 outlier 並取代成合適的值
+            method: winsorizie/hampel，選擇要做 imputation 的方法
+    """
+    if method == 'winsorizie':
+        result = winsorize(data, limits=[0.05, 0.05], inclusive=(False, False))
+    if method == 'hampel':
+        result = hampel(data, window_size=5, n=3, imputation=True)
+    return list(result)
 
 
 def main():
