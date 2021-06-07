@@ -5,10 +5,31 @@ import os
 import numpy as np
 from sklearn.cluster import KMeans
 from hampel import hampel
+import matplotlib.pyplot as plt
+import seaborn as sns
+import yaml
 
 from dir_config import DirConfig
+
+# 讀入個人設定檔
+with open("_config.yml", "r") as stream:
+    data = yaml.load(stream, Loader=yaml.FullLoader)
+# data
+plt.rcParams['font.family'] = [data['FontFamily']]
+
 path = DirConfig()
+
+
+
 # train test
+def train_test_split(data):
+    train = data[data['單據日期'].dt.year == 2020]
+    test = data[data['單據日期'].dt.year == 2021]
+    return train, test
+
+
+
+
 def cluster(transaction_data):
     transaction_data['建議售價'] = transaction_data['建議售價'].apply(str)
     transaction_data['group_name'] = transaction_data[['品牌', '性別', '建議售價']].agg('-'.join, axis=1)
@@ -16,8 +37,17 @@ def cluster(transaction_data):
     ttl_num_df['販售時間'] = (ttl_num_df['單據日期']['max'] - ttl_num_df['單據日期']['min']).dt.days
     X = ttl_num_df[['數量', '販售時間']].values
     kmeans = KMeans(n_clusters=3, random_state=0).fit(X)
+
+    fig, axes = plt.subplots(1, 3, figsize=(9, 4), sharey=True, sharex=False)
+    df = pd.DataFrame(X, columns=['售出次數', '售出總數', '販售時間'])
+    df['cluster'] = kmeans.labels_
+    sns.scatterplot(  y="售出次數", x= "售出總數", data=df,  hue='cluster' , ax=axes[0])
+    sns.scatterplot(  y="售出次數", x= "販售時間", data=df,  hue='cluster' , ax=axes[1])
+    sns.scatterplot(  y="售出總數", x= "販售時間", data=df,  hue='cluster' , ax=axes[2])
+    fig.savefig(path.to_output_file('test.png'))
+
     ttl_num_df['cluster_kind'] =  kmeans.labels_
-    print(ttl_num_df)
+    return (ttl_num_df)
 
 
 # old
@@ -246,4 +276,7 @@ def main():
 if __name__ == '__main__':
     # main()
     flow_dic, trans_dic, trans_data = read_data()
-    cluster(trans_data)
+    # cluster(trans_data)
+    train, test = train_test_split(trans_data)
+    print(train)
+    print(test)

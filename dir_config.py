@@ -3,7 +3,7 @@ import os
 
 class DirConfig:
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    output_path = os.path.join(base_dir, 'old_data', 'output')
+    output_path = os.path.join(base_dir, 'data', 'output')
     input_path = os.path.join(base_dir, 'old_data', "input")
     raw_path = os.path.join(base_dir, 'old_data', 'raw_data')
     traffic_path = os.path.join(input_path, "traffic")
