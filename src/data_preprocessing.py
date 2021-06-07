@@ -4,7 +4,10 @@ import os
 import numpy as np
 
 
-def read_data(channel=['A', 'B', 'C']):
+def read_data(channel=['A', 'B', 'C'])->(dict, dict, pd.DataFrame):
+    '''
+    read channel data
+    '''
     flow = {}
     sales_data = {}
     sales_all = pd.read_excel(os.path.join(
