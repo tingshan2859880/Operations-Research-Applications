@@ -1,15 +1,16 @@
 import pandas as pd
 import os
 
-from data_preprocessing import *
-
+# from data_preprocessing import *
+from dir_config import DirConfig
+path = DirConfig()
 
 class DynamicProgramming:
     def __init__(self, lambda_dict, prom_rate_list, inv_num, max_sold, price, week_dic={}, period_num=52):
         self.lambda_dict = lambda_dict
         self.prom_rate_list = prom_rate_list  # 折數
         self.inv_num = inv_num
-        self.max_sold = max_sold
+        self.max_sold = max_sold  # 一次最大販售數量
         self.price = price
         self.week_dic = week_dic
         self.period_num = period_num
@@ -23,9 +24,8 @@ class DynamicProgramming:
         excel 表：best policy
         """
 
-        # print(lambda_dict)
-        # max_sold = 10
         sold_unit = 1
+        inv_cost = 0.1
         ttl_state = set(range(0, self.inv_num + sold_unit, sold_unit))
 
         # action
@@ -35,7 +35,7 @@ class DynamicProgramming:
         #     A = [-1] + list(lambda_dict.keys())
         # elif(mode == 'poisson'):
         #     # print('poisson')
-        #     A = [-1] + list(lambda_dict[0].keys())
+        # A = [-1] + list(lambda_dict[0].keys())
         A = [-1] + self.prom_rate_list
         print("total state:", sorted(ttl_state))
         print("total action:", A)
@@ -64,7 +64,7 @@ class DynamicProgramming:
                     if a == -1:  # 沒有任何庫存，沒有不賣的選項
                         V[t][0] = V[t - 1][0]
                     else:
-                        lambda_list = self.lambda_dict[t-1][a]
+                        lambda_list = self.lambda_dict[t-1][a]  # time series
                         for exp_demand, prob in lambda_list.items():
                             # for
                             s_s = max(0, s - exp_demand)  # 下一期剩下的量
@@ -121,6 +121,30 @@ class DynamicProgramming:
         self.value_data = value_data
         self.total_reward = V[self.period_num][max(ttl_state)]
         return self.total_reward
+
+def find_best_quantity(min_q, max_q, interval, lambda_dict, prom_rate_list, max_sold, price, week_dic, period_num):
+    test = list(range(min_q, max_q, interval))
+    test_rev = []
+    for i in test:
+        model = DynamicProgramming(lambda_dict, prom_rate_list,  max_sold, price, inv_num=i, week_dic=week_dic, period_num=period_num)
+        rev = model.run()
+        test_rev.append(rev)
+    print(test_rev)
+    largest = test_rev.index(max(test_rev))
+    if (largest == len(test_rev)):
+        test_2 = range(test_rev[largest-1], test_rev[largest])
+    elif rest_rev[largest-1] > test_rev[largest+1]:
+        test_2 = range(test_rev[largest-1], test_rev[largest])
+    else:
+        test_2 = range(test_rev[largest], test_rev[largest+1])
+    test2_rev = []
+    for i in test_2:
+        model = DynamicProgramming(lambda_dict, prom_rate_list,  max_sold, price, inv_num=i, week_dic=week_dic, period_num=period_num)
+        rev = model.run()
+        test2_rev.append(rev)
+    print(test2_rev)
+    largest = test_rev.index(max(test_rev))
+
 
 
 if __name__ == '__main__':
