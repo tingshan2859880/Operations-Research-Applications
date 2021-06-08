@@ -1,0 +1,61 @@
+<mxfile>
+    <diagram id="yAMHQ77CbaSYS3IUMq6n" name="Page-1">
+        <mxGraphModel dx="804" dy="338" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="131" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="120" target="130" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="120" value="Data preprocessing" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;" parent="1" vertex="1">
+                    <mxGeometry x="10" y="90" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="133" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="130" target="132" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="135" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="130" target="132" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="138" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="130" target="137" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="130" value="Find the probability of each scenario:&lt;br&gt;clustering" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;" parent="1" vertex="1">
+                    <mxGeometry x="170" y="90" width="130" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="140" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="132" target="139" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="132" value="Estimate demand distribution:&lt;br&gt;ARMA / ARIMA" style="whiteSpace=wrap;html=1;rounded=1;strokeWidth=2;arcSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="340" y="50" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="141" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="137" target="139" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="137" value="Estimate demand distribution:&lt;br&gt;Linear Regression" style="whiteSpace=wrap;html=1;rounded=1;strokeWidth=2;arcSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="340" y="130" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="143" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="139" target="142" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="139" value="Aggregation" style="whiteSpace=wrap;html=1;rounded=1;strokeWidth=2;arcSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="500" y="100" width="90" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="145" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="142" target="144" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="142" value="2-stage recource problem:&lt;br&gt;stage 1 - determine purchase volume (LP)" style="whiteSpace=wrap;html=1;rounded=1;strokeWidth=2;arcSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="620" y="90" width="130" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="147" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="144" target="146" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="144" value="&lt;span&gt;2-stage recource problem:&lt;/span&gt;&lt;br&gt;&lt;span&gt;stage 2 - determine pricing policy (DP)&lt;/span&gt;" style="whiteSpace=wrap;html=1;rounded=1;strokeWidth=2;arcSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="780" y="90" width="130" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="146" value="Planning result" style="whiteSpace=wrap;html=1;rounded=1;strokeWidth=2;arcSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="940" y="100" width="120" height="40" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
