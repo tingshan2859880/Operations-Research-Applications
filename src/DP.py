@@ -122,12 +122,12 @@ class DynamicProgramming:
         self.total_reward = V[self.period_num][max(ttl_state)]
         return self.total_reward
 
-def find_best_quantity(min_q, max_q, interval, lambda_dict, prom_rate_list, max_sold, price, week_dic, period_num):
+def find_best_quantity(lambda_dict, prom_rate_list, max_sold, price, week_dic, period_num, buy_cost, max_q, min_q=0, interval=10):
     test = list(range(min_q, max_q, interval))
     test_rev = []
     for i in test:
         model = DynamicProgramming(lambda_dict, prom_rate_list,  max_sold, price, inv_num=i, week_dic=week_dic, period_num=period_num)
-        rev = model.run()
+        rev = model.run() - buy_cost * i
         test_rev.append(rev)
     print(test_rev)
     largest = test_rev.index(max(test_rev))
@@ -139,7 +139,7 @@ def find_best_quantity(min_q, max_q, interval, lambda_dict, prom_rate_list, max_
         test_2 = range(test_rev[largest], test_rev[largest+1])
     test2_rev = []
     for i in test_2:
-        model = DynamicProgramming(lambda_dict, prom_rate_list,  max_sold, price, inv_num=i, week_dic=week_dic, period_num=period_num)
+        model = DynamicProgramming(lambda_dict, prom_rate_list, max_sold, price, inv_num=i, week_dic=week_dic, period_num=period_num)
         rev = model.run()
         test2_rev.append(rev)
     print(test2_rev)
