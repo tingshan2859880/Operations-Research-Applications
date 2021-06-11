@@ -29,6 +29,7 @@ def train_test_split(data):
 
 def cluster(transaction_data):
     transaction_data['建議售價'] = transaction_data['建議售價'].apply(str)
+<<<<<<< HEAD
     transaction_data['group_name'] = transaction_data[[
         '品牌', '性別', '建議售價']].agg('-'.join, axis=1)
     ttl_num_df = transaction_data[['group_name', '數量', '單據日期']].groupby(
@@ -36,14 +37,28 @@ def cluster(transaction_data):
     ttl_num_df['販售時間'] = (ttl_num_df['單據日期']['max'] -
                           ttl_num_df['單據日期']['min']).dt.days
     X = ttl_num_df[['數量', '販售時間']].values
+=======
+    transaction_data['group_name'] = transaction_data[['品牌', '性別', '建議售價']].agg('-'.join, axis=1)
+    transaction_data['建議售價'] = transaction_data['建議售價'].apply(int)
+    ttl_num_df = transaction_data[['group_name','數量', '單據日期', '建議售價']].groupby(['group_name']).agg({'數量':['count', 'sum'], '單據日期':['min', 'max'], '建議售價':'mean'}).reset_index()
+    ttl_num_df['販售時間'] = (ttl_num_df['單據日期']['max'] - ttl_num_df['單據日期']['min']).dt.days
+    X = ttl_num_df[['數量', '販售時間', '建議售價']].values
+>>>>>>> 4635b341c11a0d131d698c5c37e22a0d46a94696
     kmeans = KMeans(n_clusters=3, random_state=0).fit(X)
 
-    fig, axes = plt.subplots(1, 3, figsize=(9, 4), sharey=True, sharex=False)
-    df = pd.DataFrame(X, columns=['售出次數', '售出總數', '販售時間'])
+    fig, axes = plt.subplots(1, 3, figsize=(9, 4), sharey=False, sharex=False)
+    df = pd.DataFrame(X, columns=['售出次數', '售出總數', '販售時間', '建議售價'])
     df['cluster'] = kmeans.labels_
+<<<<<<< HEAD
     sns.scatterplot(y="售出次數", x="售出總數", data=df,  hue='cluster', ax=axes[0])
     sns.scatterplot(y="售出次數", x="販售時間", data=df,  hue='cluster', ax=axes[1])
     sns.scatterplot(y="售出總數", x="販售時間", data=df,  hue='cluster', ax=axes[2])
+=======
+    print(df)
+    sns.scatterplot(  y="售出次數", x= "售出總數", data=df,  hue='cluster' , ax=axes[0])
+    sns.scatterplot(  y="售出次數", x= "販售時間", data=df,  hue='cluster' , ax=axes[1])
+    sns.scatterplot(  y="售出總數", x= "建議售價", data=df,  hue='cluster' , ax=axes[2])
+>>>>>>> 4635b341c11a0d131d698c5c37e22a0d46a94696
     fig.savefig(path.to_output_file('test.png'))
 
     ttl_num_df['cluster_kind'] = kmeans.labels_
@@ -275,7 +290,7 @@ def main():
 if __name__ == '__main__':
     # main()
     flow_dic, trans_dic, trans_data = read_data()
-    # cluster(trans_data)
-    train, test = train_test_split(trans_data)
-    print(train)
-    print(test)
+    cluster(trans_data)
+    # train, test = train_test_split(trans_data)
+    # print(train)
+    # print(test)
