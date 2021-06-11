@@ -12,13 +12,12 @@ import yaml
 from dir_config import DirConfig
 
 # 讀入個人設定檔
-with open("_config.yml", "r") as stream:
-    data = yaml.load(stream, Loader=yaml.FullLoader)
-# data
-plt.rcParams['font.family'] = [data['FontFamily']]
+# with open("_config.yml", "r") as stream:
+#     data = yaml.load(stream, Loader=yaml.FullLoader)
+# # data
+# plt.rcParams['font.family'] = [data['FontFamily']]
 
 path = DirConfig()
-
 
 
 # train test
@@ -28,25 +27,26 @@ def train_test_split(data):
     return train, test
 
 
-
-
 def cluster(transaction_data):
     transaction_data['建議售價'] = transaction_data['建議售價'].apply(str)
-    transaction_data['group_name'] = transaction_data[['品牌', '性別', '建議售價']].agg('-'.join, axis=1)
-    ttl_num_df = transaction_data[['group_name','數量', '單據日期']].groupby(['group_name']).agg({'數量':['count', 'sum'], '單據日期':['min', 'max']}).reset_index()
-    ttl_num_df['販售時間'] = (ttl_num_df['單據日期']['max'] - ttl_num_df['單據日期']['min']).dt.days
+    transaction_data['group_name'] = transaction_data[[
+        '品牌', '性別', '建議售價']].agg('-'.join, axis=1)
+    ttl_num_df = transaction_data[['group_name', '數量', '單據日期']].groupby(
+        ['group_name']).agg({'數量': ['count', 'sum'], '單據日期': ['min', 'max']}).reset_index()
+    ttl_num_df['販售時間'] = (ttl_num_df['單據日期']['max'] -
+                          ttl_num_df['單據日期']['min']).dt.days
     X = ttl_num_df[['數量', '販售時間']].values
     kmeans = KMeans(n_clusters=3, random_state=0).fit(X)
 
     fig, axes = plt.subplots(1, 3, figsize=(9, 4), sharey=True, sharex=False)
     df = pd.DataFrame(X, columns=['售出次數', '售出總數', '販售時間'])
     df['cluster'] = kmeans.labels_
-    sns.scatterplot(  y="售出次數", x= "售出總數", data=df,  hue='cluster' , ax=axes[0])
-    sns.scatterplot(  y="售出次數", x= "販售時間", data=df,  hue='cluster' , ax=axes[1])
-    sns.scatterplot(  y="售出總數", x= "販售時間", data=df,  hue='cluster' , ax=axes[2])
+    sns.scatterplot(y="售出次數", x="售出總數", data=df,  hue='cluster', ax=axes[0])
+    sns.scatterplot(y="售出次數", x="販售時間", data=df,  hue='cluster', ax=axes[1])
+    sns.scatterplot(y="售出總數", x="販售時間", data=df,  hue='cluster', ax=axes[2])
     fig.savefig(path.to_output_file('test.png'))
 
-    ttl_num_df['cluster_kind'] =  kmeans.labels_
+    ttl_num_df['cluster_kind'] = kmeans.labels_
     return (ttl_num_df)
 
 
@@ -188,7 +188,6 @@ def read_transaction_data(update=False, use_old=False):
         return current_transaction
 
 
-
 def read_data(channel=['A', 'B', 'C']):
     '''
     read channel data
@@ -205,7 +204,7 @@ def read_data(channel=['A', 'B', 'C']):
 
 
 def agg_daily_data(data):
-    data_pivot = data.pivot_table(index='SlipDate', aggfunc={
+    data_pivot = data.pivot_table(index='單據日期', aggfunc={
                                   '單價': np.mean, '數量': np.sum})
     data_pivot.reset_index(inplace=True)
     return data_pivot
@@ -216,10 +215,10 @@ def fill_daily_na(data):
     將當天沒有販售紀錄的鞋款，以前一天的價格作為當天沒有販售的價格
     """
     date = pd.DataFrame()
-    date['SlipDate'] = pd.date_range(
-        start=min(data['SlipDate']), end=max(data['SlipDate']), freq='D')
+    date['單據日期'] = pd.date_range(
+        start=min(data['單據日期']), end=max(data['單據日期']), freq='D')
 
-    daily_sales = date.merge(data, on="SlipDate", how="left")
+    daily_sales = date.merge(data, on="單據日期", how="left")
     daily_sales["數量"] = daily_sales["數量"].fillna(0)
     daily_sales["單價"] = daily_sales["單價"].fillna(
         method="ffill")  # 用前一天的單價當作沒有銷售量的那一天的單價
@@ -229,11 +228,11 @@ def fill_daily_na(data):
 
 
 def agg_weekly_data(data):
-    year = data['SlipDate'].dt.year.unique()
+    year = data['單據日期'].dt.year.unique()
     week_accumulate = 0  # 如果資料跨年，要累積計算
-    data['week'] = data['SlipDate'].dt.isocalendar().week
-    data['week_day'] = data['SlipDate'].dt.weekday
-    data['year'] = data['SlipDate'].dt.isocalendar().year
+    data['week'] = data['單據日期'].dt.isocalendar().week
+    data['week_day'] = data['單據日期'].dt.weekday
+    data['year'] = data['單據日期'].dt.isocalendar().year
 
     for y in year:
         data.loc[data['year'] == y, 'week'] += week_accumulate
@@ -263,7 +262,7 @@ def remove_outlier(data: list, method='winsorizie'):
 
 def main():
     # import data
-    flow, sales_data = read_data()
+    flow, sales_data, sales_all = read_data()
 
     weekly_sales = {}
     for k, v in sales_data.items():

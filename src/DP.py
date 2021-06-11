@@ -5,6 +5,7 @@ import os
 from dir_config import DirConfig
 path = DirConfig()
 
+
 class DynamicProgramming:
     def __init__(self, lambda_dict, prom_rate_list, inv_num, max_sold, price, week_dic={}, period_num=52):
         self.lambda_dict = lambda_dict
@@ -68,8 +69,9 @@ class DynamicProgramming:
                         for exp_demand, prob in lambda_list.items():
                             # for
                             s_s = max(0, s - exp_demand)  # 下一期剩下的量
-                            rev += (V[t - 1][s_s] + min(exp_demand, s) * a * self.price) * prob
-                             - self.inv_cost * 7 * prob * (s - min(exp_demand, s))
+                            rev += (V[t - 1][s_s] + min(exp_demand, s) * a * self.price) * \
+                                prob - self.inv_cost * 7 * \
+                                prob * (s - min(exp_demand, s))
                         rev = float(rev)
                         if s in V[t]:
                             if rev > V[t][s]:
@@ -85,7 +87,6 @@ class DynamicProgramming:
                                 best_action[t][s] = a
                             V[t][s] = rev
                     V_record[t][s][a] = rev
-
 
         # DP result
         action_data = {}
@@ -122,11 +123,13 @@ class DynamicProgramming:
         self.total_reward = V[self.period_num][max(ttl_state)]
         return self.total_reward
 
+
 def find_best_quantity(lambda_dict, prom_rate_list, max_sold, price, week_dic, period_num, buy_cost, max_q, min_q=0, interval=10):
     test = list(range(min_q, max_q, interval))
     test_rev = []
     for i in test:
-        model = DynamicProgramming(lambda_dict, prom_rate_list,  max_sold, price, inv_num=i, week_dic=week_dic, period_num=period_num)
+        model = DynamicProgramming(lambda_dict, prom_rate_list,  max_sold,
+                                   price, inv_num=i, week_dic=week_dic, period_num=period_num)
         rev = model.run() - buy_cost * i
         test_rev.append(rev)
     print(test_rev)
@@ -139,12 +142,12 @@ def find_best_quantity(lambda_dict, prom_rate_list, max_sold, price, week_dic, p
         test_2 = range(test_rev[largest], test_rev[largest+1])
     test2_rev = []
     for i in test_2:
-        model = DynamicProgramming(lambda_dict, prom_rate_list, max_sold, price, inv_num=i, week_dic=week_dic, period_num=period_num)
+        model = DynamicProgramming(lambda_dict, prom_rate_list, max_sold,
+                                   price, inv_num=i, week_dic=week_dic, period_num=period_num)
         rev = model.run()
         test2_rev.append(rev)
     print(test2_rev)
     largest = test_rev.index(max(test_rev))
-
 
 
 if __name__ == '__main__':

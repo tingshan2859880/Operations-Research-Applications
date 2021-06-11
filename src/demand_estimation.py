@@ -9,7 +9,7 @@ from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tools.eval_measures import mse
 from matplotlib import pyplot as plt
 
-from data_preprocessing import *
+from .data_preprocessing import *
 
 
 class TimeSeries:
@@ -324,10 +324,10 @@ def main():
         sales_data[k] = fill_daily_na(
             agg_daily_data(sales_data[k]))  # 補沒有販售的時間點
         sales_data[k], weekly_sales[k] = agg_weekly_data(sales_data[k])  # 整理成週
-        sales_data[k].set_index('SlipDate', inplace=True)
+        sales_data[k].set_index('單據日期', inplace=True)
 
     sales_all = fill_daily_na(agg_daily_data(sales_all))
-    sales_all.set_index('SlipDate', inplace=True)
+    sales_all.set_index('單據日期', inplace=True)
 
     ts_test = TimeSeries(sales_all['數量'])
     ts_test.ACF_PACF()
