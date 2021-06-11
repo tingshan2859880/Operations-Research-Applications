@@ -42,11 +42,11 @@ def cluster(transaction_data):
     fig, axes = plt.subplots(1, 3, figsize=(9, 4), sharey=False, sharex=False)
     df = pd.DataFrame(X, columns=['售出次數', '售出總數', '販售時間', '建議售價'])
     df['cluster'] = kmeans.labels_
-    print(df)
+    # print(df)
     sns.scatterplot(y="售出次數", x="售出總數", data=df,  hue='cluster', ax=axes[0])
     sns.scatterplot(y="售出次數", x="販售時間", data=df,  hue='cluster', ax=axes[1])
     sns.scatterplot(y="售出總數", x="建議售價", data=df,  hue='cluster', ax=axes[2])
-    fig.savefig(path.to_output_file('test.png'))
+    # fig.savefig(path.to_output_file('test.png'))
 
     ttl_num_df['cluster_kind'] = kmeans.labels_
     return (ttl_num_df)
@@ -229,7 +229,7 @@ def fill_daily_na(data):
     return daily_sales
 
 
-def agg_weekly_data(data):
+def agg_weekly_data(data, return_weekly_pivot=True):
     year = data['單據日期'].dt.year.unique()
     week_accumulate = 0  # 如果資料跨年，要累積計算
     data['week'] = data['單據日期'].dt.isocalendar().week
@@ -242,8 +242,10 @@ def agg_weekly_data(data):
     data.loc[data['week_day'] == 0,
              'week'] = data.loc[data['week_day'] == 0, 'week'] - 1
 
-    weekly_data = data.pivot_table(
-        index='week', aggfunc={'單價': np.mean, '數量': np.sum})
+    weekly_data = None
+    if return_weekly_pivot:
+        weekly_data = data.pivot_table(
+            index='week', aggfunc={'單價': np.mean, '數量': np.sum})
 
     return data, weekly_data
 
@@ -277,7 +279,8 @@ def main():
 if __name__ == '__main__':
     # main()
     flow_dic, trans_dic, trans_data = read_data()
-    cluster(trans_data)
+    print(flow_dic)
+    # cluster(trans_data)
     # train, test = train_test_split(trans_data)
     # print(train)
     # print(test)

@@ -8,8 +8,28 @@ import statsmodels.formula.api as smf
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tools.eval_measures import mse
 from matplotlib import pyplot as plt
+from pmdarima.arima import auto_arima
 
 from .data_preprocessing import *
+
+
+def weighted_average(mse_list, data):
+    """
+    計算每一天加權平均後的預測值
+        Args:
+            mse_list: 1xn matrix，代表 n 個模型的mse
+            data: nxk matrix，代表 n 個模型中各自有 k 個預測值
+        Returns: 1xk matrix，代表加權後的 k 個預測結果
+    """
+    inverse_mse = []
+    for i in mse_list:
+        inverse_mse.append(1/i)
+    weight = []
+    for i in inverse_mse:
+        weight.append(i/sum(inverse_mse))
+
+    avg = np.dot(weight, data)
+    return avg
 
 
 class TimeSeries:
@@ -60,35 +80,48 @@ class TimeSeries:
         plt.show()
         return
 
-    def fit(self, p_range, d_range, q_range):
+    def fit(self, p_range=range(5), d_range=range(3), q_range=range(5),  method='auto', print_trace=False):
         """
         Args:
             p_range: 要進行測試的參數 p 範圍
             d_range: 要進行測試的參數 d 範圍
             q_range: 要進行測試的參數 q 範圍
+            method:
         Returns:
             best_model: 最佳 ARMA 模型
             best_aic: 最佳 ARMA 模型的 AIC
+            best_pdq_set: 最佳 (p, d, q) 組合
         """
-        best_model = None
-        best_aic = 100000000000000000
-        best_pdq_set = None
-        for p in p_range:
-            for d in d_range:
-                for q in q_range:
-                    model = ARIMA(
-                        self.data, order=(p, d, q)).fit()  # 如果是 ARMA 只要 d=0 即可
+        if method == 'auto':
+            self.auto_arima = True
+            self.normal_arima = False
+            n_diffs = self.ADF_test(None)
+            best_model = auto_arima(self.data, d=n_diffs, seasonal=False, stepwise=True, error_action="ignore", max_p=max(p_range), max_q=max(q_range),
+                                    max_order=None, trace=print_trace)
+            best_aic = best_model.aic()
+            best_pdq_set = best_model.order
+        if method == 'normal':
+            self.auto_arima = False
+            self.normal_arima = True
+            best_model = None
+            best_aic = 100000000000000000
+            best_pdq_set = None
+            for p in p_range:
+                for d in d_range:
+                    for q in q_range:
+                        model = ARIMA(
+                            self.data, order=(p, d, q)).fit()  # 如果是 ARMA 只要 d=0 即可
 
-                    if model.aic < best_aic:
-                        best_aic = model.aic
-                        best_model = model
-                        best_pdq_set = (p, d, q)
+                        if model.aic < best_aic:
+                            best_aic = model.aic
+                            best_model = model
+                            best_pdq_set = (p, d, q)
         self.model = best_model
         self.aic = best_aic
         self.best_param_set = best_pdq_set
         return best_model, best_aic, best_pdq_set
 
-    def predict(self, start_date, end_date):
+    def predict(self, start_date=None, end_date=None, period=None):
         """
         輸入未來一段時間區間做預測
         Args:
@@ -96,7 +129,10 @@ class TimeSeries:
             end_date: 結束日
         Returns: 預測結果
         """
-        pred = self.model.predict(start_date, end_date)
+        if self.normal_arima:
+            pred = self.model.predict(start_date, end_date)
+        if self.auto_arima:
+            pred = self.model.predict(period)
         return pred
 
     def MSE(self, pred, real):
@@ -112,12 +148,30 @@ class TimeSeries:
 
     def box_pierce_test(self, alpha=0.05):
         # H0: 殘差是獨立的，模型有效
-        lbq = sm.stats.acorr_ljungbox(self.model.resid, lags=[
-                                      10], return_df=True, boxpierce=True)
-        if lbq.loc[10, 'bp_pvalue'] <= alpha:
+        if self.normal_arima:
+            lbq = sm.stats.acorr_ljungbox(self.model.resid(), lags=[
+                7], return_df=True, boxpierce=True)
+        if self.auto_arima:
+            lbq = sm.stats.acorr_ljungbox(self.model.resid(), lags=[
+                7], return_df=True, boxpierce=True)
+        if lbq.loc[7, 'bp_pvalue'] <= alpha:
             return False
         else:
             return True
+
+    def auto_arima_fit(self, print_trace=False):
+        self.auto_arima = True
+        self.normal_arima = False
+        n_diffs = self.ADF_test(None)
+        best_model = auto_arima(self.data, d=n_diffs, seasonal=False, stepwise=True, error_action="ignore", max_p=10, max_q=10,
+                                max_order=None, trace=print_trace)
+        best_aic = best_model.aic()
+        best_pdq_set = best_model.order
+        self.model = best_model
+        self.aic = best_aic
+        self.best_param_set = best_pdq_set
+
+        return best_model, best_aic, best_pdq_set
 
 
 def test_stationarity(timeseries):
@@ -149,22 +203,20 @@ class LinearModel:
         Args:
             data: 包含日期、需求量與瀏覽數三個 columns 的資料集
         """
-        self.data = data
+        self.data = data.copy()
+        self.data.reset_index(inplace=True)
         return
 
-    def fit_traffic(self, holiday: list):
+    def fit_traffic_lm(self, holiday=['12/31', '8/31']):
         """
-        建立預測日瀏覽數的模型
+        以 linear regression 建立預測日瀏覽數的模型
             Args:
-                channel: 單一通路名稱
                 holiday: 一個記錄特殊節慶的list
             Returns: 迴歸模型
         """
-        # print("____clean traffic file")
         traffic = self.data.copy()
-        # traffic['seq_no'] = traffic.index + 1
 
-        year = traffic['日期'].dt.year.unique()
+        year = traffic['單據日期'].dt.year.unique()
         holiday_date = []
         for h in holiday:
             for y in year:
@@ -173,15 +225,15 @@ class LinearModel:
         traffic['前後7天內有特殊節日'] = 0
         traffic['temp'] = 0
         for d in holiday_date:
-            traffic['temp'] = (traffic['日期'] - d).dt.days
+            traffic['temp'] = (traffic['單據日期'] - d).dt.days
             traffic['temp'] = abs(traffic['temp'])
             traffic.loc[(traffic['temp'] <= 7), '前後7天內有特殊節日'] = 1
-        traffic.drop(columns=['日期', 'temp'], inplace=True)
+        traffic.drop(columns=['單據日期', 'temp'], inplace=True)
 
         # 清理資料
         traffic.dropna(inplace=True)
         traffic['瀏覽數'] = traffic['瀏覽數'].astype(int)
-        traffic = traffic[['瀏覽數', 'Seq_no', '前後7天內有特殊節日']]
+        traffic = traffic[['瀏覽數', 'seq_no', '前後7天內有特殊節日']]
 
         cols = list(traffic.columns)
         cols.remove('瀏覽數')
@@ -191,27 +243,39 @@ class LinearModel:
         mod = smf.ols(formula="瀏覽數~" + all_columns, data=traffic)
         res = mod.fit()
 
-        self.traffic_model = res
+        self.traffic_model_lm = res
 
         return res
 
-    def predict_traffic(self, model, start_date: datetime, end_date: datetime, holiday: list) -> pd.DataFrame:
+    def fit_traffic_arima(self):
+        """
+        用 ARIMA 建立預測日瀏覽數的模型
+            Returns: 迴歸模型
+        """
+        traffic = self.data.copy()['瀏覽數']
+
+        res = TimeSeries(traffic)
+        res.fit()
+        self.traffic_model_arima = res
+
+        return res
+
+    def predict_traffic_lm(self, testing, start_date, end_date, holiday=['12/31', '8/31']) -> pd.DataFrame:
         """
         預測每日瀏覽數
             Args:
                 model: 預測模型
                 start_date: 預測瀏覽數起始日期
                 end_date: 預測瀏覽數結束日期
-                holiday: 
+                holiday:
             Returns: 包含日期與預測瀏覽數兩個欄位的 dataframe
         """
         new_data = pd.DataFrame()
-        # print(pd.date_range(start_date, end_date))
-        new_data['日期'] = pd.date_range(start_date, end_date)
+        new_data['單據日期'] = pd.date_range(start_date, end_date)
 
         new_data['seq_no'] = range(
-            max(self.data.index) + 2, max(self.data.index) + 2 + len(new_data['日期']))
-        year = new_data['日期'].dt.year.unique()
+            max(self.data.index) + 2, max(self.data.index) + 2 + len(new_data['單據日期']))
+        year = new_data['單據日期'].dt.year.unique()
         holiday_date = []
         for h in holiday:
             for y in year:
@@ -220,57 +284,63 @@ class LinearModel:
         new_data['前後7天內有特殊節日'] = 0
         new_data['temp'] = 0
         for d in holiday_date:
-            new_data['temp'] = (new_data['日期'] - d).dt.days
+            new_data['temp'] = (new_data['單據日期'] - d).dt.days
             new_data['temp'] = abs(new_data['temp'])
             new_data.loc[(new_data['temp'] <= 7), '前後7天內有特殊節日'] = 1
-        new_data.drop(columns=['日期', 'temp'], inplace=True)
+        new_data.drop(columns=['單據日期', 'temp'], inplace=True)
 
         pred = pd.DataFrame()
-        pred['日期'] = pd.date_range(start_date, end_date)
-        pred['瀏覽數_pred'] = model.predict(new_data)
+        pred['單據日期'] = pd.date_range(start_date, end_date)
+        pred['瀏覽數_pred'] = self.traffic_model_lm.predict(new_data)
+        mse_lm = mse(pred['瀏覽數_pred'][:len(testing)], testing)
 
-        return pred
+        return pred, mse_lm
 
-    def fit_sales_daily(self, sales_data: pd.DataFrame, traffic_data: pd.DataFrame):
+    def predict_traffic_arima(self, testing, start_date, end_date):
+        if self.traffic_model_arima.normal_arima:
+            pred = self.traffic_model_arima.predict(
+                start_date=start_date, end_date=end_date)
+        if self.traffic_model_arima.auto_arima:
+            pred = self.traffic_model_arima.predict(
+                period=(end_date-start_date).days+1)
+        mse_arima = self.traffic_model_arima.MSE(pred[:len(testing)], testing)
+        return pred, mse_arima
+
+    def fit_predict_traffic(self, testing, start_date, end_date, holiday=['12/31', '8/31']):
+        self.fit_traffic_lm()
+        self.fit_traffic_arima()
+        pred_lm, mse_lm = self.predict_traffic_lm(
+            testing, start_date, end_date)
+        pred_arima, mse_arima = self.predict_traffic_arima(
+            testing, start_date, end_date)
+
+        return weighted_average(np.array([mse_lm, mse_arima]), np.array([pred_lm['瀏覽數_pred'], pred_arima]))
+
+    def fit_sales_daily(self):
         """
         建立預測日銷售量的模型
-            Args:
-                sales_data: 銷售資料，包含日期、單價、數量三個 columns
-                traffic_data: 瀏覽數資料
-                channel: 單一通路名稱
             Returns: 迴歸模型
         """
-        data = pd.merge(sales_data, traffic_data, left_on='單據日期',
-                        right_on='日期').drop(columns='日期')
-        # data = data[(np.abs(data['數量']-data['數量'].mean()) <= (3*data['數量'].std()))]
-        # keep only the ones that are within +3 to -3 standard deviations in the column 'Data'.
-        # data = data[~(np.abs(data['數量']-data['數量'].mean()) > (3*data['數量'].std()))]
-        data.dropna(inplace=True)
-        data, _ = agg_weekly_data(data)
-        data = data[['數量', '單價', '瀏覽數', 'week_day']]
-        # data['seq_no'] = data.index + 1
-        data['數量'] = data['數量'].astype(int)
-        data['單價'] = data['單價'].astype(float)
-        data['瀏覽數'] = data['瀏覽數'].astype(int)
+        sales_data = self.data.copy()
+        sales_data = sales_data[['數量', '單價', '瀏覽數', 'week_day']]
+        sales_data['數量'] = sales_data['數量'].astype(int)
+        sales_data['單價'] = sales_data['單價'].astype(float)
+        sales_data['瀏覽數'] = sales_data['瀏覽數'].astype(int)
+        sales_data['week_day'] = sales_data['week_day'].astype(str)
+        sales_data = pd.get_dummies(sales_data, drop_first=True)
 
-        data['week_day'] = data['week_day'].astype(str)
-        # print("____get dummies")
-        data = pd.get_dummies(data, drop_first=True)
-
-        cols = list(data.columns)
+        cols = list(sales_data.columns)
         cols.remove('數量')
 
-        # print("___fit sales data")
         all_columns = "+".join(cols)
-        mod = smf.ols(formula="數量~" + all_columns, data=data)
+        mod = smf.ols(formula="數量~" + all_columns, data=sales_data)
         res = mod.fit()
 
         self.sales_model = res
 
         return res
 
-    def predict_sales_daily(self, price, model, sales_data: pd.DataFrame, traffic_prediction: pd.DataFrame,
-                            start_date: datetime, end_date: datetime) -> pd.DataFrame:
+    def predict_sales_daily(self, testing, price, traffic_prediction, start_date, end_date):
         """
         預測日需求
             Args:
@@ -285,34 +355,22 @@ class LinearModel:
         new_data = pd.DataFrame()
         new_data['單據日期'] = pd.date_range(start_date, end_date)
         new_data['單價'] = price
-        new_data['瀏覽數'] = traffic_prediction['瀏覽數_pred']
-        new_data, _ = agg_weekly_data(new_data)
-        # new_data['seq_no'] = range((start_date - min(sales_data['單據日期'])).days + 1,
-        #                            (start_date - min(sales_data['單據日期'])).days + len(new_data['單據日期']) + 1)
+        new_data['瀏覽數'] = traffic_prediction
+        new_data, _ = agg_weekly_data(new_data, False)
         new_data['week_day'] = new_data['week_day'].astype(str)
         new_data = pd.get_dummies(new_data, drop_first=True)
         new_data.drop(columns=['單據日期', 'week'], inplace=True)
         pred = pd.DataFrame()
-        pred['日期'] = pd.date_range(start_date, end_date)
-        pred['數量_pred'] = model.predict(new_data)
-        return pred
+        pred['單據日期'] = pd.date_range(start_date, end_date)
+        pred['數量_pred'] = self.sales_model.predict(new_data)
 
-
-def weighted_average(weights, data):
-    """
-    計算每一天加權平均後的預測值
-        Args:
-            weights: 1xn matrix，代表 n 個模型的權重
-            data: nxk matrix，代表 n 個模型中各自有 k 個預測值
-        Returns: 1xk matrix，代表加權後的 k 個預測結果
-    """
-    avg = np.dot(weights, data)
-    return avg
+        mse_lm = mse(pred['數量_pred'][:len(testing)], testing)
+        return pred, mse_lm
 
 
 def main():
     '''
-    1. 拔掉 outlier 
+    1. 拔掉 outlier
     2. train-test
     3. cluster(目前資料怎麼做)
     4. data 要重新抓
@@ -330,13 +388,16 @@ def main():
     sales_all.set_index('單據日期', inplace=True)
 
     ts_test = TimeSeries(sales_all['數量'])
-    ts_test.ACF_PACF()
-    d = ts_test.ADF_test(None)
+    # ts_test.ACF_PACF()
+    # d = ts_test.ADF_test(None)
 
-    p_range = list(range(2, 6))
-    d_range = [0]
-    q_range = list(range(2, 6))
-    model, aic, params = ts_test.fit(p_range, d_range, q_range)
+    # p_range = list(range(2, 6))
+    # d_range = [0]
+    # q_range = list(range(2, 6))
+    # model, aic, params = ts_test.fit(p_range, d_range, q_range)
+    # print("model is good (not lack of fit)?", ts_test.box_pierce_test())
+
+    ts_test.auto_arima_fit()
     print("model is good (not lack of fit)?", ts_test.box_pierce_test())
 
     return
