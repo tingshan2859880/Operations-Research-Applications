@@ -33,12 +33,15 @@ def weighted_average(mse_list, data):
 
 
 class TimeSeries:
-    def __init__(self, data):
+    def __init__(self, data, no_outiler=True):
         """
         Args:
             data: index 為時間、只有一個 column （需求量或瀏覽數）的資料集
         """
-        self.data = data
+        if no_outiler:
+            self.data = pd.Series(remove_outlier(data), index=data.index)
+        else:
+            self.data = data
         return
 
     def ADF_test(self, data, alpha=0.05, find_d=False):

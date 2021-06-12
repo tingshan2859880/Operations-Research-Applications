@@ -54,7 +54,7 @@ def predict_lambda(start_date, end_date, discount_rate=np.arange(0.8, 1, 0.1), o
                 testing.set_index('單據日期', inplace=True)
 
                 # build time series model
-                arima = TimeSeries(training['數量'])
+                arima = TimeSeries(training['數量'], False)
                 arima.fit(p_range=range(3), q_range=range(3))
                 print("AIC =", arima.aic, ", Best (p, d, q) =",
                       arima.best_param_set, end=", ")
@@ -74,17 +74,22 @@ def predict_lambda(start_date, end_date, discount_rate=np.arange(0.8, 1, 0.1), o
                     testing['數量'], d*origin_price, traffic_pred, start_date, end_date)
                 pred = weighted_average(np.array([lm_mse, arima_mse]), np.array(
                     [lm_pred['數量_pred'], arima_pred]))
-                agg_lambda[d] += pred  # 在折扣為 d 時的，未來每一天的 lambda
+
+                agg_lambda[d] += pred
+
+            # 在折扣為 d 時的，一個組合平均未來每一天的 lambda
+            agg_lambda[d] = agg_lambda[d] / len(groups_in_cluster)
 
         agg_lambda['單據日期'] = agg_lambda.index
         agg_lambda, _ = agg_weekly_data(agg_lambda, False)
         agg_lambda.drop(['單據日期', 'week_day', 'year'], axis=1, inplace=True)
         print(agg_lambda)
         agg_lambda_pivot = agg_lambda.pivot_table(index='week', aggfunc=np.sum)
+        print(agg_lambda_pivot)
         agg_lambda_pivot.reset_index(drop=True, inplace=True)
         transpose_lambda = agg_lambda_pivot.T
+        transpose_lambda.drop(0, axis=1, inplace=True)
         print(transpose_lambda)
-        # transpose_lambda.reset_index(drop=True, inplace=True)
         for t in transpose_lambda.columns:
             demand_prob[i][t] = {}
             for d in transpose_lambda.index:
@@ -97,7 +102,9 @@ def predict_lambda(start_date, end_date, discount_rate=np.arange(0.8, 1, 0.1), o
 
 
 if __name__ == '__main__':
-    start_time = time()
-    print(predict_lambda(start_date=datetime(
-        2021, 1, 1), end_date=datetime(2021, 3, 5)))
+    start_time = time.time()
+    for k, v in predict_lambda(start_date=datetime(2021, 1, 1), end_date=datetime(2021, 3, 8)).items():
+        print("demand distribution of cluster", k)
+        print(v)
+        print("-")
     print("time: %.2f seconds" % (time.time() - start_time))

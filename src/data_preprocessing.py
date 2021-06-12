@@ -229,8 +229,8 @@ def fill_daily_na(data):
     return daily_sales
 
 
-def agg_weekly_data(data, return_weekly_pivot=True):
-    year = data['單據日期'].dt.year.unique()
+def agg_weekly_data(data, return_weekly_pivot=True, year=[2020, 2021]):
+    # year = data['單據日期'].dt.year.unique()
     week_accumulate = 0  # 如果資料跨年，要累積計算
     data['week'] = data['單據日期'].dt.isocalendar().week
     data['week_day'] = data['單據日期'].dt.weekday
@@ -250,7 +250,7 @@ def agg_weekly_data(data, return_weekly_pivot=True):
     return data, weekly_data
 
 
-def remove_outlier(data: list, method='winsorizie'):
+def remove_outlier(data: list, method='hampel'):
     """
     移除 data 裡面的 Outlier
         Args:
