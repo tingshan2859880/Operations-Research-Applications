@@ -2,16 +2,16 @@ import numpy as np
 from datetime import datetime
 import time
 from scipy.stats import poisson
+import math
 
-from .DP import DynamicProgramming
+from .DP import DynamicProgramming, find_best_quantity
 from dir_config import DirConfig
 from .data_preprocessing import *
 from .demand_estimation import *
 
 path = DirConfig()
 
-
-def predict_demand_dist(start_date, end_date, discount_rate=np.arange(0.5, 1, 0.1), origin_price=2880, min_sold=0, max_sold=10, debug_mode=True):
+def do_cluster(num=3):
     # read data
     flow_dic, trans_dic, trans_data = read_data()
     trans_data['建議售價'] = trans_data['建議售價'].apply(str)
@@ -19,8 +19,10 @@ def predict_demand_dist(start_date, end_date, discount_rate=np.arange(0.5, 1, 0.
         '品牌', '性別', '建議售價']].agg('-'.join, axis=1)
 
     # estimate the probability of each scenario
-    trans_with_cluster = cluster(trans_data)
+    trans_with_cluster = cluster(trans_data, num)
+    return trans_with_cluster, [flow_dic, trans_dic, trans_data]
 
+def predict_demand_dist(trans_with_cluster, data_list, start_date, end_date, discount_rate=np.arange(0.5, 1, 0.1), origin_price=2880, min_sold=0, debug_mode=True):
     scenario_probability = trans_with_cluster['cluster_kind'].value_counts(
         normalize=True)
     if debug_mode:
@@ -31,11 +33,11 @@ def predict_demand_dist(start_date, end_date, discount_rate=np.arange(0.5, 1, 0.
 
     # do demand estimation for each scenario
     demand_prob = {}
-
+    flow_dic, trans_dic, trans_data = data_list
     for i in trans_with_cluster['cluster_kind'].unique():
         demand_prob[i] = {}
         print("----- predicting cluster", i, "-----")
-
+        max_sold = int(trans_with_cluster.loc[trans_with_cluster['cluster_kind'] == i, '數量'].quantile(0.95)['sum'])
         # slice data and get transaction records that belong to cluster i
         groups_in_cluster = trans_with_cluster.loc[trans_with_cluster['cluster_kind'] == i]['group_name'].unique(
         )
@@ -112,12 +114,31 @@ def predict_demand_dist(start_date, end_date, discount_rate=np.arange(0.5, 1, 0.
 
 
 def main():
+    # parameters setting
+    origin_price = 2880
+    discount_rate = np.arange(0.5, 1, 0.1)
     start_time = time.time()
-    for k, v in predict_demand_dist(start_date=datetime(2021, 1, 1), end_date=datetime(2021, 3, 8), max_sold=50).items():
+    max_sold = 50
+    start_date=datetime(2021, 1, 1)
+    end_date=datetime(2021, 2, 8)
+    period_num = math.floor((end_date-start_date).days/7)
+    buy_cost = 1440
+
+    trans_cluster, data_list = do_cluster()
+    print(trans_cluster)
+    for k, v in predict_demand_dist(trans_cluster, data_list, start_date=datetime(2021, 1, 1), end_date=datetime(2021, 3, 8), discount_rate=discount_rate, origin_price=origin_price).items():
         print("demand distribution of cluster", k)
-        print(v)
+        # print(v)
+        # print(v.keys())
         print("-")
-    print("time: %.2f seconds" % (time.time() - start_time))
+        max_q = int(trans_cluster.loc[trans_cluster['cluster_kind'] == k, '數量'].quantile(0.95)['sum'])
+        min_q = int(trans_cluster.loc[trans_cluster['cluster_kind'] == k, '數量'].quantile(0.05)['sum'])
+        buy_num ,model = find_best_quantity(v, max_sold, origin_price, period_num, buy_cost, max_q=max_q, min_q=0, interval=10)
+        print(buy_num, model.total_reward)
+        model.export_result('best_policy_'+str(k))
+    
+    # print("time: %.2f seconds" % (time.time() - start_time))
+    
 
 
 if __name__ == '__main__':

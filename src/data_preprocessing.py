@@ -14,7 +14,7 @@ from dir_config import DirConfig
 path = DirConfig()
 
 # 讀入個人設定檔
-with open(os.path.join(path.src_path, "_config.yml"), "rb") as stream:
+with open("_config.yml", "rb") as stream:
     data = yaml.load(stream, Loader=yaml.FullLoader)
 # data
 plt.rcParams['font.family'] = [data['FontFamily']]
@@ -27,7 +27,7 @@ def train_test_split(data):
     return train, test
 
 
-def cluster(transaction_data):
+def cluster(transaction_data, num=3):
     transaction_data['建議售價'] = transaction_data['建議售價'].apply(str)
     transaction_data['group_name'] = transaction_data[[
         '品牌', '性別', '建議售價']].agg('-'.join, axis=1)
@@ -37,7 +37,7 @@ def cluster(transaction_data):
     ttl_num_df['販售時間'] = (ttl_num_df['單據日期']['max'] -
                           ttl_num_df['單據日期']['min']).dt.days
     X = ttl_num_df[['數量', '販售時間', '建議售價']].values
-    kmeans = KMeans(n_clusters=3, random_state=0).fit(X)
+    kmeans = KMeans(n_clusters=num, random_state=0).fit(X)
 
     fig, axes = plt.subplots(1, 3, figsize=(9, 4), sharey=False, sharex=False)
     df = pd.DataFrame(X, columns=['售出次數', '售出總數', '販售時間', '建議售價'])
