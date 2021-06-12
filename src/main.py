@@ -11,7 +11,7 @@ from .demand_estimation import *
 path = DirConfig()
 
 
-def predict_lambda(start_date, end_date, discount_rate=np.arange(0.8, 1, 0.1), origin_price=2880, total_amount=10):
+def predict_demand_dist(start_date, end_date, discount_rate=np.arange(0.5, 1, 0.1), origin_price=2880, min_sold=0, max_sold=10, debug_mode=True):
     # read data
     flow_dic, trans_dic, trans_data = read_data()
     trans_data['建議售價'] = trans_data['建議售價'].apply(str)
@@ -20,9 +20,14 @@ def predict_lambda(start_date, end_date, discount_rate=np.arange(0.8, 1, 0.1), o
 
     # estimate the probability of each scenario
     trans_with_cluster = cluster(trans_data)
+
     scenario_probability = trans_with_cluster['cluster_kind'].value_counts(
         normalize=True)
-    print(scenario_probability)
+    if debug_mode:
+        print(trans_with_cluster)
+        print(trans_with_cluster.pivot_table(index='cluster_kind', aggfunc={
+            ('數量', 'count'): np.sum, ('數量', 'sum'): np.sum, ('建議售價', 'mean'): np.mean, ('販售時間', ''): np.mean}))
+        print(scenario_probability)
 
     # do demand estimation for each scenario
     demand_prob = {}
@@ -30,9 +35,11 @@ def predict_lambda(start_date, end_date, discount_rate=np.arange(0.8, 1, 0.1), o
     for i in trans_with_cluster['cluster_kind'].unique():
         demand_prob[i] = {}
         print("----- predicting cluster", i, "-----")
+
         # slice data and get transaction records that belong to cluster i
         groups_in_cluster = trans_with_cluster.loc[trans_with_cluster['cluster_kind'] == i]['group_name'].unique(
         )
+        print("there are", len(groups_in_cluster), "groups")
         trans = trans_data.loc[trans_data['group_name'].isin(
             groups_in_cluster)]
 
@@ -56,13 +63,14 @@ def predict_lambda(start_date, end_date, discount_rate=np.arange(0.8, 1, 0.1), o
                 # build time series model
                 arima = TimeSeries(training['數量'], False)
                 arima.fit(p_range=range(3), q_range=range(3))
-                print("AIC =", arima.aic, ", Best (p, d, q) =",
-                      arima.best_param_set, end=", ")
-                print("model is good (not lack of fit)?",
-                      arima.box_pierce_test(), end=", ")
                 arima_pred = arima.predict(period=(end_date-start_date).days+1)
                 arima_mse = arima.MSE(arima_pred[:len(testing)], testing['數量'])
-                print("MSE =", arima_mse)
+                if debug_mode:
+                    print("AIC =", arima.aic, end=", ")
+                    print("Best (p, d, q) =", arima.best_param_set, end=", ")
+                    print("model is good (not lack of fit)?",
+                          arima.box_pierce_test(), end=", ")
+                    print("MSE =", arima_mse)
 
                 # build linear regression model for every possible discount rate
                 lm = LinearModel(
@@ -80,31 +88,37 @@ def predict_lambda(start_date, end_date, discount_rate=np.arange(0.8, 1, 0.1), o
             # 在折扣為 d 時的，一個組合平均未來每一天的 lambda
             agg_lambda[d] = agg_lambda[d] / len(groups_in_cluster)
 
+        # trasform the predicted lambda into the demand distribution
         agg_lambda['單據日期'] = agg_lambda.index
         agg_lambda, _ = agg_weekly_data(agg_lambda, False)
         agg_lambda.drop(['單據日期', 'week_day', 'year'], axis=1, inplace=True)
-        print(agg_lambda)
         agg_lambda_pivot = agg_lambda.pivot_table(index='week', aggfunc=np.sum)
-        print(agg_lambda_pivot)
+        if debug_mode:
+            print(agg_lambda)
+            print(agg_lambda_pivot)
         agg_lambda_pivot.reset_index(drop=True, inplace=True)
         transpose_lambda = agg_lambda_pivot.T
         transpose_lambda.drop(0, axis=1, inplace=True)
-        print(transpose_lambda)
+        if debug_mode:
+            print(transpose_lambda)
         for t in transpose_lambda.columns:
             demand_prob[i][t] = {}
             for d in transpose_lambda.index:
-                demand_prob[i][t][d] = dict(zip(range(total_amount), [poisson.pmf(
-                    x, max(0, transpose_lambda.loc[d, t])) for x in range(total_amount)]))
-                demand_prob[i][t][d][total_amount] = max(
-                    0, 1 - poisson.cdf(total_amount-1, max(0, transpose_lambda.loc[d, t])))
-
+                demand_prob[i][t][d] = dict(zip(range(min_sold, max_sold), [poisson.pmf(
+                    x, max(0, transpose_lambda.loc[d, t])) for x in range(min_sold, max_sold)]))
+                demand_prob[i][t][d][max_sold] = max(
+                    0, 1 - poisson.cdf(max_sold-1, max(0, transpose_lambda.loc[d, t])))
     return demand_prob
 
 
-if __name__ == '__main__':
+def main():
     start_time = time.time()
-    for k, v in predict_lambda(start_date=datetime(2021, 1, 1), end_date=datetime(2021, 3, 8)).items():
+    for k, v in predict_demand_dist(start_date=datetime(2021, 1, 1), end_date=datetime(2021, 3, 8), max_sold=50).items():
         print("demand distribution of cluster", k)
         print(v)
         print("-")
     print("time: %.2f seconds" % (time.time() - start_time))
+
+
+if __name__ == '__main__':
+    main()

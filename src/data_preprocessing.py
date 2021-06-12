@@ -11,13 +11,13 @@ import yaml
 
 from dir_config import DirConfig
 
-# 讀入個人設定檔
-# with open("_config.yml", "r") as stream:
-#     data = yaml.load(stream, Loader=yaml.FullLoader)
-# # data
-# plt.rcParams['font.family'] = [data['FontFamily']]
-
 path = DirConfig()
+
+# 讀入個人設定檔
+with open(os.path.join(path.src_path, "_config.yml"), "rb") as stream:
+    data = yaml.load(stream, Loader=yaml.FullLoader)
+# data
+plt.rcParams['font.family'] = [data['FontFamily']]
 
 
 # train test
@@ -46,7 +46,7 @@ def cluster(transaction_data):
     sns.scatterplot(y="售出次數", x="售出總數", data=df,  hue='cluster', ax=axes[0])
     sns.scatterplot(y="售出次數", x="販售時間", data=df,  hue='cluster', ax=axes[1])
     sns.scatterplot(y="售出總數", x="建議售價", data=df,  hue='cluster', ax=axes[2])
-    # fig.savefig(path.to_output_file('test.png'))
+    fig.savefig(path.to_an_output_file('test.png'))
 
     ttl_num_df['cluster_kind'] = kmeans.labels_
     return (ttl_num_df)
