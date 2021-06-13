@@ -124,7 +124,7 @@ class TimeSeries:
         self.best_param_set = best_pdq_set
         return best_model, best_aic, best_pdq_set
 
-    def predict(self, price=None, start_date=None, end_date=None, period=None):
+    def predict(self, regressors=None, start_date=None, end_date=None, period=None):
         """
         輸入未來一段時間區間做預測
         Args:
@@ -136,7 +136,7 @@ class TimeSeries:
             pred = self.model.predict(start_date, end_date)
         if self.auto_arima:
             pred = self.model.predict(
-                n_periods=period, X=np.array([price]*period).reshape(-1, 1))
+                n_periods=period, X=regressors)
             pred = [max(0, x) for x in pred]
         return pred
 
@@ -313,9 +313,10 @@ class LinearModel:
             Returns: 迴歸模型
         """
         sales_data = self.data.copy()
-        sales_data = sales_data[['數量', '折數', '瀏覽數', 'week_day']]
+        sales_data = sales_data[['數量', '折數', '建議售價', '瀏覽數', 'week_day']]
         sales_data['數量'] = sales_data['數量'].astype(int)
         sales_data['折數'] = sales_data['折數'].astype(float)
+        sales_data['建議售價'] = sales_data['建議售價'].astype(float)
         sales_data['瀏覽數'] = sales_data['瀏覽數'].astype(int)
         sales_data['week_day'] = sales_data['week_day'].astype(str)
         sales_data = pd.get_dummies(sales_data, drop_first=True)
@@ -331,7 +332,7 @@ class LinearModel:
 
         return res
 
-    def predict_sales_daily(self, testing, price, traffic_prediction, start_date, end_date):
+    def predict_sales_daily(self, testing, price, origin_price, traffic_prediction, start_date, end_date):
         """
         預測日需求
             Args:
@@ -346,6 +347,7 @@ class LinearModel:
         new_data = pd.DataFrame()
         new_data['單據日期'] = pd.date_range(start_date, end_date)
         new_data['折數'] = price
+        new_data['建議售價'] = origin_price
         new_data['瀏覽數'] = traffic_prediction
         new_data, _ = agg_weekly_data(new_data, False)
         new_data['week_day'] = new_data['week_day'].astype(str)

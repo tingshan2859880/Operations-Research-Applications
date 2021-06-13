@@ -65,24 +65,25 @@ def predict_demand_dist(trans_cluster_v, trans_with_cluster, data_list, start_da
             testing.set_index('單據日期', inplace=True)
 
             # build time series model
-            arima = TimeSeries(training['數量'], False)
-            arima.fit(price=np.array(training['折數']).reshape(-1, 1),
+            arima = TimeSeries(training['數量'], True)
+            arima.fit(price=np.array(training[['折數', '建議售價']]),
                       p_range=range(3), q_range=range(3))
 
             # build linear regression model for every possible discount rate
             lm = LinearModel(
-                training[['數量', '折數', '瀏覽數', 'seq_no', 'week_day']])
+                training[['數量', '折數', '建議售價', '瀏覽數', 'seq_no', 'week_day']])
             traffic_pred = lm.fit_predict_traffic(
                 testing['瀏覽數'], start_date, end_date)
             lm.fit_sales_daily()
 
             for d in discount_rate:  # for each discount rate
-                print("________ discount rate:", d)
+                # print("________ discount rate:", d)
+                periods = (end_date-start_date).days+1
                 arima_pred = arima.predict(
-                    period=(end_date-start_date).days+1, price=d)
+                    period=periods, regressors=np.array([d, origin_price]*periods).reshape(-1, 2))
                 arima_mse = arima.MSE(arima_pred[:len(testing)], testing['數量'])
                 lm_pred, lm_mse = lm.predict_sales_daily(
-                    testing['數量'], d, traffic_pred, start_date, end_date)
+                    testing['數量'], d, origin_price, traffic_pred, start_date, end_date)
                 pred = weighted_average(np.array([lm_mse, arima_mse]), np.array(
                     [lm_pred['數量_pred'], arima_pred]))
 
@@ -124,14 +125,14 @@ def predict_demand_dist(trans_cluster_v, trans_with_cluster, data_list, start_da
 
 def main():
     # parameters setting
-    origin_price = 800
+    origin_price = 3000
     discount_rate = np.arange(0.4, 1.1, 0.1)
     start_time = time.time()
     max_sold = 50
     start_date = datetime(2021, 1, 1)
     end_date = datetime(2021, 2, 8)
     period_num = math.floor((end_date-start_date).days/7)
-    buy_cost = 400
+    buy_cost = 900
 
     trans_cluster, data_list = do_cluster(3)
     # print(trans_cluster[['group_name', 'cluster_kind']])

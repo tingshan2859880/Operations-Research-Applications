@@ -72,8 +72,8 @@ def read_data(channel=['A', 'B', 'C']):
 
 
 def agg_daily_data(data):
-    data_pivot = data.pivot_table(index='單據日期', aggfunc={
-                                  '折數': np.mean, '數量': np.sum})
+    data_pivot = data.pivot_table(
+        index='單據日期', aggfunc={'折數': np.mean, '建議售價': np.mean, '數量': np.sum})
     data_pivot.reset_index(inplace=True)
     return data_pivot
 
@@ -91,6 +91,10 @@ def fill_daily_na(data):
     daily_sales["折數"] = daily_sales["折數"].fillna(
         method="ffill")  # 用前一天的單價當作沒有銷售量的那一天的單價
     daily_sales["折數"] = daily_sales["折數"].fillna(
+        method="bfill")  # 還沒有fill的那些在用第一次有銷售紀錄的fill
+    daily_sales["建議售價"] = daily_sales["建議售價"].fillna(
+        method="ffill")  # 用前一天的單價當作沒有銷售量的那一天的單價
+    daily_sales["建議售價"] = daily_sales["建議售價"].fillna(
         method="bfill")  # 還沒有fill的那些在用第一次有銷售紀錄的fill
     return daily_sales
 
@@ -111,7 +115,7 @@ def agg_weekly_data(data, return_weekly_pivot=True, year=[2020, 2021]):
     weekly_data = None
     if return_weekly_pivot:
         weekly_data = data.pivot_table(
-            index='week', aggfunc={'折數': np.mean, '數量': np.sum})
+            index='week', aggfunc={'折數': np.mean, '建議售價': np.mean, '數量': np.sum})
 
     return data, weekly_data
 
