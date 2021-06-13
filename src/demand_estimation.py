@@ -313,9 +313,9 @@ class LinearModel:
             Returns: 迴歸模型
         """
         sales_data = self.data.copy()
-        sales_data = sales_data[['數量', '單價', '瀏覽數', 'week_day']]
+        sales_data = sales_data[['數量', '折數', '瀏覽數', 'week_day']]
         sales_data['數量'] = sales_data['數量'].astype(int)
-        sales_data['單價'] = sales_data['單價'].astype(float)
+        sales_data['折數'] = sales_data['折數'].astype(float)
         sales_data['瀏覽數'] = sales_data['瀏覽數'].astype(int)
         sales_data['week_day'] = sales_data['week_day'].astype(str)
         sales_data = pd.get_dummies(sales_data, drop_first=True)
@@ -345,7 +345,7 @@ class LinearModel:
         """
         new_data = pd.DataFrame()
         new_data['單據日期'] = pd.date_range(start_date, end_date)
-        new_data['單價'] = price
+        new_data['折數'] = price
         new_data['瀏覽數'] = traffic_prediction
         new_data, _ = agg_weekly_data(new_data, False)
         new_data['week_day'] = new_data['week_day'].astype(str)
@@ -354,6 +354,7 @@ class LinearModel:
         pred = pd.DataFrame()
         pred['單據日期'] = pd.date_range(start_date, end_date)
         pred['數量_pred'] = self.sales_model.predict(new_data)
+        pred['數量_pred'] = [max(0, x) for x in pred['數量_pred']]
 
         mse_lm = mse(pred['數量_pred'][:len(testing)], testing)
         return pred, mse_lm

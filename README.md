@@ -2,7 +2,6 @@
 
 <!-- 概要：講說不一定的點在哪 -->
 <!-- 使用兩階段 stochastic dynamic Programming 規劃訂貨量和每一期的定價，並以 Arima 和 regreession 作為需求估計方法。 -->
-There are many RL tutorials, courses, papers in the internet. This one summarizes all of the RL tutorials, RL courses, and some of the important RL papers including sample code of RL algorithms. It will continue to be updated over time.
 Pricing is an important problem, and there are various methodologies. 
 In this research, we try to find order quantity and following pricing stategies. 
 The methodogies includes demand forecasting and dynamic programming.
