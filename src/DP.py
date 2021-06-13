@@ -117,9 +117,9 @@ class DynamicProgramming:
     def export_result(self, name='best_policy'):
         # if os.path.exists(os.path.join(os.abspath(__file__), "output")) == False:
         #     os.makedirs(os.path.join(os.abspath(__file__), "output"))
-        with open(path.to_output_file(name+'model.pkl'), 'wb') as handle:
+        with open(path.to_new_output_file(name+'model.pkl'), 'wb') as handle:
             pkl.dump(self, handle, protocol=pkl.HIGHEST_PROTOCOL)
-        with pd.ExcelWriter(path.to_output_file(name+".xlsx"), engine='xlsxwriter') as writer:
+        with pd.ExcelWriter(path.to_new_output_file(name+".xlsx"), engine='xlsxwriter') as writer:
             self.data.to_excel(writer, sheet_name="action")
             self.value_data.to_excel(writer, sheet_name="value")
             # for t, plan in self.V_record.items():
