@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+import pickle as pkl
 
 # from data_preprocessing import *
 from dir_config import DirConfig
@@ -38,7 +39,7 @@ class DynamicProgramming:
         #     # print('poisson')
         # A = [-1] + list(lambda_dict[0].keys())
         A = [-1] + self.prom_rate_list
-        print("total state:", sorted(ttl_state))
+        print("total state:", min(ttl_state), '~', max(ttl_state))
         print("total action:", A)
 
         # transition function and optimality equation
@@ -114,18 +115,22 @@ class DynamicProgramming:
         return self.total_reward
 
     def export_result(self, name='best_policy'):
-        if os.path.exists(os.path.join(os.abspath(__file__), "output")) == False:
-            os.makedirs(os.path.join(os.abspath(__file__), "output"))
-
-        with pd.ExcelWriter(path.to_an_output_file(name+".xlsx"), engine='xlsxwriter') as writer:
+        # if os.path.exists(os.path.join(os.abspath(__file__), "output")) == False:
+        #     os.makedirs(os.path.join(os.abspath(__file__), "output"))
+        with open(path.to_output_file(name+'model.pkl'), 'wb') as handle:
+            pkl.dump(self, handle, protocol=pkl.HIGHEST_PROTOCOL)
+        with pd.ExcelWriter(path.to_output_file(name+".xlsx"), engine='xlsxwriter') as writer:
             self.data.to_excel(writer, sheet_name="action")
             self.value_data.to_excel(writer, sheet_name="value")
-            for t, plan in self.V_record.items():
-                period_data = pd.DataFrame.from_dict(
-                    plan, orient='index', columns=sorted(A))
-                period_data['best_value'] = self.V[t].values()
-                period_data['best_action'] = self.best_action[t].values()
-                period_data.to_excel(writer, sheet_name="period_" + str(t))
+            # for t, plan in self.V_record.items():
+            #     print(t)
+            #     period_data = pd.DataFrame.from_dict(
+            #         plan, orient='index', columns=sorted([-1] + self.prom_rate_list))
+            #     print()
+            #     period_data['best_value'] = self.V[t].values()
+            #     print(self.best_action[t].values())
+            #     period_data['best_action'] = self.best_action[t].values()
+            #     period_data.to_excel(writer, sheet_name="period_" + str(t))
 
 def find_best_quantity(lambda_dict, max_sold, price, period_num, buy_cost, max_q, min_q=0, interval=10):
     '''
@@ -133,10 +138,14 @@ def find_best_quantity(lambda_dict, max_sold, price, period_num, buy_cost, max_q
         max_q: 最大進貨量
         min_q: 最小進貨量
     '''
-    test = list(range(min_q, max_q, interval))
+    print(max_q, min_q)
+    inter = (max_q - min_q)//interval
+    test = list(range(min_q, max_q, inter))
     test_rev = []
+    
     prom_rate_list = list(lambda_dict[1].keys())
     for i in test:
+        max_sold = min(100, i)
         # lambda_dict, prom_rate_list, inv_num, max_sold, price, period_num=52
         model = DynamicProgramming(lambda_dict, prom_rate_list, i, max_sold,
                                    price, period_num=period_num)
@@ -144,23 +153,24 @@ def find_best_quantity(lambda_dict, max_sold, price, period_num, buy_cost, max_q
         test_rev.append(rev)
     print(test_rev)
     largest = test_rev.index(max(test_rev))
-    if (largest == len(test_rev)):
-        test_2 = range(test_rev[largest-1], test_rev[largest])
-    elif rest_rev[largest-1] > test_rev[largest+1]:
-        test_2 = range(test_rev[largest-1], test_rev[largest])
+    if (largest == len(test_rev)-1):
+        test_2 = range(test[largest-1], test[largest])
+    elif test_rev[largest-1] > test_rev[largest+1]:
+        test_2 = range(test[largest-1], test[largest])
     else:
-        test_2 = range(test_rev[largest], test_rev[largest+1])
+        test_2 = range(test[largest], test[largest+1])
     test2_rev = []
     models = []
     for i in test_2:
+        max_sold = min(100, i)
         # prom_rate_list, inv_num, max_sold
-        model = DynamicProgramming(lambda_dict, prom_rate_list, max_sold,
-                                   price, inv_num=i, week_dic=week_dic, period_num=period_num)
+        model = DynamicProgramming(lambda_dict, prom_rate_list, i, max_sold,
+                                   price, period_num=period_num)
         rev = model.run()
         test2_rev.append(rev)
         models.append(model)
     print(test2_rev)
-    largest = test_rev.index(max(test_rev))
+    largest = test2_rev.index(max(test2_rev))
     return test_2[largest], models[largest]
 
 

@@ -22,7 +22,7 @@ def do_cluster(num=3):
     trans_with_cluster = cluster(trans_data, num)
     return trans_with_cluster, [flow_dic, trans_dic, trans_data]
 
-def predict_demand_dist(trans_with_cluster, data_list, start_date, end_date, discount_rate=np.arange(0.5, 1, 0.1), origin_price=2880, min_sold=0, debug_mode=True):
+def predict_demand_dist(trans_cluster_v ,trans_with_cluster, data_list, start_date, end_date, discount_rate=np.arange(0.5, 1, 0.1), origin_price=2880, min_sold=0, debug_mode=True):
     scenario_probability = trans_with_cluster['cluster_kind'].value_counts(
         normalize=True)
     if debug_mode:
@@ -37,7 +37,7 @@ def predict_demand_dist(trans_with_cluster, data_list, start_date, end_date, dis
     for i in trans_with_cluster['cluster_kind'].unique():
         demand_prob[i] = {}
         print("----- predicting cluster", i, "-----")
-        max_sold = int(trans_with_cluster.loc[trans_with_cluster['cluster_kind'] == i, '數量'].quantile(0.95)['sum'])
+        max_sold = int(trans_cluster_v.loc[trans_cluster_v['cluster_kind'] == i, '數量'].quantile(0.95))
         # slice data and get transaction records that belong to cluster i
         groups_in_cluster = trans_with_cluster.loc[trans_with_cluster['cluster_kind'] == i]['group_name'].unique(
         )
@@ -125,19 +125,32 @@ def main():
     buy_cost = 1440
 
     trans_cluster, data_list = do_cluster()
-    print(trans_cluster)
-    for k, v in predict_demand_dist(trans_cluster, data_list, start_date=datetime(2021, 1, 1), end_date=datetime(2021, 3, 8), discount_rate=discount_rate, origin_price=origin_price).items():
+    # print(trans_cluster[['group_name', 'cluster_kind']])
+    cluster_group_dic = {v['group_name'].values[0]:v['cluster_kind'].values[0] for i, v in trans_cluster[['group_name', 'cluster_kind']].iterrows()}
+    # print(cluster_group_dic)
+    data_list[2]['cluster_kind'] = data_list[2]['group_name'].map(cluster_group_dic)
+    # print(data_list[2])
+    cluster_id_dic = {v['貨號']:v['cluster_kind'] for i, v in data_list[2][['cluster_kind', '貨號']].drop_duplicates().iterrows()}
+    # print(cluster_id_dic)
+    trans_cluster_v = data_list[2][['數量', '貨號']].groupby('貨號').agg({'數量':sum}).reset_index()
+    trans_cluster_v['cluster_kind'] = trans_cluster_v['貨號'].map(cluster_id_dic)
+    # print(trans_cluster)
+    # for k in trans_cluster['cluster_kind'].unique():
+    #     max_q = int(trans_cluster.loc[trans_cluster['cluster_kind'] == k, '數量'].quantile(0.95))
+    #     min_q = int(trans_cluster.loc[trans_cluster['cluster_kind'] == k, '數量'].quantile(0.05))
+    #     print(max_q, min_q)
+    for k, v in predict_demand_dist(trans_cluster_v, trans_cluster, data_list, start_date=datetime(2021, 1, 1), end_date=datetime(2021, 3, 8), discount_rate=discount_rate, origin_price=origin_price).items():
         print("demand distribution of cluster", k)
         # print(v)
         # print(v.keys())
         print("-")
-        max_q = int(trans_cluster.loc[trans_cluster['cluster_kind'] == k, '數量'].quantile(0.95)['sum'])
-        min_q = int(trans_cluster.loc[trans_cluster['cluster_kind'] == k, '數量'].quantile(0.05)['sum'])
-        buy_num ,model = find_best_quantity(v, max_sold, origin_price, period_num, buy_cost, max_q=max_q, min_q=0, interval=10)
+        max_q = int(trans_cluster_v.loc[trans_cluster_v['cluster_kind'] == k, '數量'].quantile(0.95))
+        min_q = int(trans_cluster_v.loc[trans_cluster_v['cluster_kind'] == k, '數量'].quantile(0.05))
+        buy_num ,model = find_best_quantity(v, max_sold, origin_price, period_num, buy_cost, max_q=max_q, min_q=min_q, interval=10)
         print(buy_num, model.total_reward)
         model.export_result('best_policy_'+str(k))
     
-    # print("time: %.2f seconds" % (time.time() - start_time))
+    print("time: %.2f seconds" % (time.time() - start_time))
     
 
 
