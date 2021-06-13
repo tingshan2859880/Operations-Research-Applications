@@ -27,7 +27,7 @@ def weighted_average(mse_list, data):
     weight = []
     for i in inverse_mse:
         weight.append(i/sum(inverse_mse))
-
+    print("weight of prediction:", weight)
     avg = np.dot(weight, data)
     return avg
 
@@ -83,7 +83,7 @@ class TimeSeries:
         plt.show()
         return
 
-    def fit(self, p_range=range(5), d_range=range(3), q_range=range(5),  method='auto', print_trace=False):
+    def fit(self, price=None, p_range=range(5), d_range=range(3), q_range=range(5),  method='auto', print_trace=False):
         """
         Args:
             p_range: 要進行測試的參數 p 範圍
@@ -99,7 +99,7 @@ class TimeSeries:
             self.auto_arima = True
             self.normal_arima = False
             n_diffs = self.ADF_test(None)
-            best_model = auto_arima(self.data, d=n_diffs, seasonal=False, stepwise=True, error_action="ignore", max_p=max(p_range), max_q=max(q_range),
+            best_model = auto_arima(self.data, X=price, d=n_diffs, seasonal=False, stepwise=True, error_action="ignore", max_p=max(p_range), max_q=max(q_range),
                                     max_order=None, trace=print_trace)
             best_aic = best_model.aic()
             best_pdq_set = best_model.order
@@ -124,7 +124,7 @@ class TimeSeries:
         self.best_param_set = best_pdq_set
         return best_model, best_aic, best_pdq_set
 
-    def predict(self, start_date=None, end_date=None, period=None):
+    def predict(self, price=None, start_date=None, end_date=None, period=None):
         """
         輸入未來一段時間區間做預測
         Args:
@@ -135,7 +135,9 @@ class TimeSeries:
         if self.normal_arima:
             pred = self.model.predict(start_date, end_date)
         if self.auto_arima:
-            pred = self.model.predict(period)
+            pred = self.model.predict(
+                n_periods=period, X=np.array([price]*period).reshape(-1, 1))
+            pred = [max(0, x) for x in pred]
         return pred
 
     def MSE(self, pred, real):
@@ -161,20 +163,6 @@ class TimeSeries:
             return False
         else:
             return True
-
-    def auto_arima_fit(self, print_trace=False):
-        self.auto_arima = True
-        self.normal_arima = False
-        n_diffs = self.ADF_test(None)
-        best_model = auto_arima(self.data, d=n_diffs, seasonal=False, stepwise=True, error_action="ignore", max_p=10, max_q=10,
-                                max_order=None, trace=print_trace)
-        best_aic = best_model.aic()
-        best_pdq_set = best_model.order
-        self.model = best_model
-        self.aic = best_aic
-        self.best_param_set = best_pdq_set
-
-        return best_model, best_aic, best_pdq_set
 
 
 def test_stationarity(timeseries):
