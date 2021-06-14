@@ -130,7 +130,7 @@ def main():
     start_time = time.time()
     max_sold = 50
     start_date = datetime(2021, 1, 1)
-    end_date = datetime(2021, 2, 8)
+    end_date = datetime(2021, 3, 8)
     period_num = math.floor((end_date-start_date).days/7)
     buy_cost = 900
 
@@ -154,6 +154,7 @@ def main():
     #     max_q = int(trans_cluster.loc[trans_cluster['cluster_kind'] == k, '數量'].quantile(0.95))
     #     min_q = int(trans_cluster.loc[trans_cluster['cluster_kind'] == k, '數量'].quantile(0.05))
     #     print(max_q, min_q)
+    total_buy_name = {}
     for k, v in predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, data_list, start_date=datetime(2021, 1, 1), end_date=datetime(2021, 3, 8), discount_rate=discount_rate, origin_price=origin_price).items():
         print("demand distribution of cluster", k)
         # print(v)
@@ -167,6 +168,10 @@ def main():
             v, max_sold, origin_price, period_num, buy_cost, max_q=max_q, min_q=min_q, interval=10)
         print(buy_num, model.total_reward)
         model.export_result('best_policy_'+str(k))
+
+        total_buy_name[k] = [buy_num, model.total_reward]
+    pd.DataFrame.from_dict(total_buy_name, orient='index', columns=[
+                           'order quantity', 'expexted revenue']).to_excel(path.to_new_output_file('order_quantity.xlsx'))
 
     print("time: %.2f seconds" % (time.time() - start_time))
 
