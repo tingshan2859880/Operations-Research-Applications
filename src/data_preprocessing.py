@@ -20,7 +20,25 @@ with open("_config.yml", "rb") as stream:
 plt.rcParams['font.family'] = [data['FontFamily']]
 
 
-# train test
+def find_prediction_group(trans, trans_in_cluster_group, method='all'):
+    if method == 'all':
+        group = trans_in_cluster_group['group_name'].unique()
+
+    if method == 'best-selling':  # find the best-selling commodity
+        group = trans_in_cluster_group.loc[trans_in_cluster_group[(
+            '數量', 'sum')].idxmax(), 'group_name']
+
+    if method == 'median-selling':  # find the median-selling commidity
+        median = sorted(trans_in_cluster_group[('數量', 'sum')])[
+            len(trans_in_cluster_group[('數量', 'sum')])//2]
+        # median = np.median(trans_in_cluster_group[('數量', 'sum')])
+        index = trans_in_cluster_group[trans_in_cluster_group[(
+            '數量', 'sum')] == median].index
+        group = trans_in_cluster_group.loc[index, 'group_name']
+        print(group)
+    return trans.loc[trans['group_name'].isin(group)]
+
+
 def train_test_split(data):
     train = data[data['單據日期'].dt.year == 2020]
     test = data[data['單據日期'].dt.year == 2021]
@@ -61,8 +79,8 @@ def read_data(channel=['A', 'B', 'C']):
     sales_all = pd.read_excel(path.to_new_file('Sales_data.xlsx'))
     sales_all['折數'] = round(sales_all['單價'] / sales_all['建議售價'], 1)
     sales_all = sales_all.loc[sales_all['建議售價'] < 5000]
-    print("折數", sales_all['折數'])
-    print(np.mean(sales_all['折數']))
+    # print("折數", sales_all['折數'])
+    # print(np.mean(sales_all['折數']))
     for c in channel:
         flow[c] = pd.read_excel(path.to_new_file(c+'_流量資料.xlsx'))
 
@@ -149,8 +167,9 @@ def main():
 if __name__ == '__main__':
     # main()
     flow_dic, trans_dic, trans_data = read_data()
-    print(flow_dic)
-    # cluster(trans_data)
+    # print(flow_dic)
+    trans_data_cluster = cluster(trans_data)
+    find_prediction_group(trans_data_cluster, 'best-selling')
     # train, test = train_test_split(trans_data)
     # print(train)
     # print(test)
