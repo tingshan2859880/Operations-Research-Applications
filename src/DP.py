@@ -140,7 +140,7 @@ def find_best_quantity(lambda_dict, max_sold, price, period_num, buy_cost, max_q
     '''
     print(max_q, min_q)
     inter = (max_q - min_q)//interval
-    test = list(range(min_q, max_q, inter))
+    test = list(range(min_q, max_q+1, inter))
     test_rev = []
     
     prom_rate_list = list(lambda_dict[1].keys())

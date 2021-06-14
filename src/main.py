@@ -3,6 +3,7 @@ from datetime import datetime
 import time
 from scipy.stats import poisson
 import math
+import operator
 
 from .DP import DynamicProgramming, find_best_quantity
 from dir_config import DirConfig
@@ -123,7 +124,12 @@ def predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_s
     return demand_prob
 
 
-def main():
+def main(clus_num=3, mode='EV'):
+    print('mode:', mode)
+    '''
+    Args:
+        mode:使用哪一種方法（EV/SA/DEP）
+    '''
     # parameters setting
     origin_price = 3000
     discount_rate = np.arange(0.4, 1.1, 0.1)
@@ -149,32 +155,93 @@ def main():
         '貨號').agg({'數量': sum}).reset_index()
     trans_with_cluster_item['cluster_kind'] = trans_with_cluster_item['貨號'].map(
         cluster_id_dic)
-    # print(trans_cluster)
-    # for k in trans_cluster['cluster_kind'].unique():
-    #     max_q = int(trans_cluster.loc[trans_cluster['cluster_kind'] == k, '數量'].quantile(0.95))
-    #     min_q = int(trans_cluster.loc[trans_cluster['cluster_kind'] == k, '數量'].quantile(0.05))
-    #     print(max_q, min_q)
-    total_buy_name = {}
-    for k, v in predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, data_list, start_date=datetime(2021, 1, 1), end_date=datetime(2021, 3, 8), discount_rate=discount_rate, origin_price=origin_price).items():
-        print("demand distribution of cluster", k)
-        # print(v)
-        # print(v.keys())
-        print("-")
-        max_q = int(
-            trans_with_cluster_item.loc[trans_with_cluster_item['cluster_kind'] == k, '數量'].quantile(0.95))
-        min_q = int(
-            trans_with_cluster_item.loc[trans_with_cluster_item['cluster_kind'] == k, '數量'].quantile(0.05))
+    max_percent = 0.95
+    min_percent = 0.05
+    probs = trans_with_cluster_item[['cluster_kind', '貨號']].groupby('cluster_kind').count() / trans_with_cluster_item.shape[0]
+    probs = probs.to_dict()['貨號']
+    cluster_kinds = trans_with_cluster_item['cluster_kind'].unique()
+    if mode == 'EV' or mode == 'DEP':
+        # 機率以 ev 方式加總
+        max_q = int(trans_with_cluster_item['數量'].quantile(max_percent))
+        max_solds = {k:max_q  for k in cluster_kinds}
+        min_q = int(trans_with_cluster_item['數量'].quantile(min_percent))
+        min_solds = {k: min_q for k in cluster_kinds}
+    else:
+        # 各個 cluster 單獨算
+        max_solds = {}
+        min_solds = {}
+        for k in cluster_kinds:
+            max_solds[k] = int(trans_with_cluster_item.loc[trans_with_cluster_item['cluster_kind'] == k, '數量'].quantile(max_percent))
+            min_solds[k] = int(trans_with_cluster_item.loc[trans_with_cluster_item['cluster_kind'] == k, '數量'].quantile(min_percent))
+    demand_dic = predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_solds, data_list, start_date=datetime(2021, 1, 1), end_date=datetime(2021, 3, 8), discount_rate=discount_rate, origin_price=origin_price)
+    if mode == 'EV':
+        ev_demand_dic = {}
+        for t in demand_dic[0].keys():
+            ev_demand_dic[t] = {}
+            for p in demand_dic[0][1].keys():
+                ev_demand_dic[t][p] = {}
+                for q in range(0, max_q+1):
+                    ev_demand_dic[t][p][q] = 0
+                    for k in cluster_kinds:
+                        ev_demand_dic[t][p][q] += demand_dic[k][t][p][q] * probs[k]
         buy_num, model = find_best_quantity(
-            v, max_sold, origin_price, period_num, buy_cost, max_q=max_q, min_q=min_q, interval=10)
-        print(buy_num, model.total_reward)
-        model.export_result('best_policy_'+str(k))
+                ev_demand_dic, max_sold, origin_price, period_num, buy_cost, max_q=max_solds[k], min_q=min_solds[k], interval=10)
+        model.export_result('best_policy_EV')
+        print('購買量：', buy_num)
+    elif mode == 'DEP':
+        prom_rate_list = list(demand_dic[0][1].keys())
+        total_buy_name = {}
+        buy_rev_ev = {}
+        total_buy_name[-1] = [probs[i] for i in probs] + [1]
+        for i in range(min_q, max_q+1):
+            buy_rev_ev[i] = 0
+            total_buy_name[i] = []
 
-        total_buy_name[k] = [buy_num, model.total_reward]
-    pd.DataFrame.from_dict(total_buy_name, orient='index', columns=[
-                           'order quantity', 'expexted revenue']).to_excel(path.to_new_output_file('order_quantity.xlsx'))
+            for k in cluster_kinds:
+                model = DynamicProgramming(demand_dic[k], prom_rate_list, i, min(100, i),
+                                   origin_price, period_num=period_num)
+                rev = model.run() - buy_cost * i
+                total_buy_name[i].append(rev)
+                buy_rev_ev[i]  += rev*probs[k]
+            total_buy_name[i].append(buy_rev_ev[i])
+                
+        
+                # total_rev += rev*probs[k]
+        df = pd.DataFrame.from_dict(total_buy_name, orient='index', columns=list(cluster_kinds)+['expected'])
+        df.to_excel(path.to_new_output_file('DEP_order_quantity.xlsx'))
+        largest = max(buy_rev_ev.items(), key=operator.itemgetter(1))[0]
+        print('購買量：', largest)
+        revs = []
+        for k in cluster_kinds:
+            model = DynamicProgramming(demand_dic[k], prom_rate_list, largest, min(100, largest),
+                                    origin_price, period_num=period_num)
+            rev = model.run() - buy_cost * i
+            revs.append(rev)
+            model.export_result('best_policy_DEP_'+str(k))
+        pd.DataFrame([[largest]*len(cluster_kinds+1),[probs[i] for i in probs] + [1], revs+[buy_rev_ev[largest]]], index=['訂購量', '機率', 'revenue'], columns=list(cluster_kinds)+['expected']).to_excel('DEP_best_ev.xlsx')
+        
+    else:
+        total_buy_name = {}
+        for k, v in demand_dic.items():
+            print("demand distribution of cluster", k)
+            # print(v)
+            # print(v.keys())
+            print("-")
+            # max_q = int(
+            #     trans_with_cluster_item.loc[trans_with_cluster_item['cluster_kind'] == k, '數量'].quantile(0.95))
+            # min_q = int(
+            #     trans_with_cluster_item.loc[trans_with_cluster_item['cluster_kind'] == k, '數量'].quantile(0.05))
+            buy_num, model = find_best_quantity(
+                v, max_sold, origin_price, period_num, buy_cost, max_q=max_solds[k], min_q=min_solds[k], interval=10)
+            print(buy_num, model.total_reward)
+            model.export_result('best_policy_'+str(k))
+
+            total_buy_name[k] = [buy_num, model.total_reward]
+        pd.DataFrame.from_dict(total_buy_name, orient='index', columns=[
+                            'order quantity', 'expexted revenue']).to_excel(path.to_new_output_file('order_quantity.xlsx'))
 
     print("time: %.2f seconds" % (time.time() - start_time))
 
 
 if __name__ == '__main__':
-    main()
+    main(mode='DEP')
