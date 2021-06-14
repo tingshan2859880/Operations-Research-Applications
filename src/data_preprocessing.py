@@ -29,6 +29,7 @@ def train_test_split(data):
 
 def cluster(transaction_data, num=3):
     transaction_data['建議售價'] = transaction_data['建議售價'].apply(str)
+    # transaction_data['group_name'] = transaction_data['貨號']
     transaction_data['group_name'] = transaction_data[[
         '品牌', '性別', '建議售價']].agg('-'.join, axis=1)
     transaction_data['建議售價'] = transaction_data['建議售價'].apply(int)
@@ -36,7 +37,8 @@ def cluster(transaction_data, num=3):
         {'數量': ['count', 'sum'], '單據日期': ['min', 'max'], '建議售價': 'mean'}).reset_index()
     ttl_num_df['販售時間'] = (ttl_num_df['單據日期']['max'] -
                           ttl_num_df['單據日期']['min']).dt.days
-    X = ttl_num_df[['數量', '販售時間', '建議售價']].values
+    filters = ['數量', '販售時間', '建議售價']
+    X = ttl_num_df[filters].values
     kmeans = KMeans(n_clusters=num, random_state=0).fit(X)
 
     fig, axes = plt.subplots(1, 3, figsize=(9, 4), sharey=False, sharex=False)

@@ -24,11 +24,16 @@ def do_cluster(num=3):
     return trans_with_cluster, [flow_dic, trans_dic, trans_data]
 
 
-def predict_demand_dist(trans_cluster_v, trans_with_cluster, data_list, start_date, end_date, discount_rate=np.arange(0.5, 1, 0.1), origin_price=2880, min_sold=0, debug_mode=True):
+def predict_demand_dist(max_sold_list, trans_with_cluster, data_list, start_date, end_date, discount_rate=np.arange(0.5, 1, 0.1), origin_price=2880, min_sold=0, debug_mode=True):
+    """
+    Arg:
+        max_sold_list: 各個 cluster 的 max_sold
+        trans_cluster_v: 為 cluster data （單位可能是 group/貨號）
+    """
     scenario_probability = trans_with_cluster['cluster_kind'].value_counts(
         normalize=True)
     if debug_mode:
-        print(trans_cluster_v)
+        print(trans_with_cluster)
         # print(trans_cluster_v.pivot_table(index='cluster_kind', aggfunc={
         #     ('數量', 'count'): np.sum, ('數量', 'sum'): np.sum, ('建議售價', 'mean'): np.mean, ('販售時間', ''): np.mean}))
         print(scenario_probability)
@@ -40,9 +45,9 @@ def predict_demand_dist(trans_cluster_v, trans_with_cluster, data_list, start_da
         demand_prob[i] = {}
         print("----- predicting cluster", i, "-----")
         max_sold = int(
-            trans_cluster_v.loc[trans_cluster_v['cluster_kind'] == i, '數量'].quantile(0.95))
+            trans_with_cluster.loc[trans_with_cluster['cluster_kind'] == i, '數量'].quantile(0.95))
         # slice data and get transaction records that belong to cluster i
-        groups_in_cluster = trans_cluster_v.loc[trans_cluster_v['cluster_kind'] == i]['貨號'].unique(
+        groups_in_cluster = trans_with_cluster.loc[trans_with_cluster['cluster_kind'] == i]['貨號'].unique(
         )
         print("there are", len(groups_in_cluster), "groups")
         trans = trans_data.loc[trans_data['貨號'].isin(
