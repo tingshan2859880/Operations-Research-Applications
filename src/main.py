@@ -24,34 +24,28 @@ def do_cluster(num=3):
     return trans_with_cluster, [flow_dic, trans_dic, trans_data]
 
 
-def predict_demand_dist(max_sold_list, trans_with_cluster, data_list, start_date, end_date, discount_rate=np.arange(0.5, 1, 0.1), origin_price=2880, min_sold=0, debug_mode=True):
-    """
-    Arg:
-        max_sold_list: 各個 cluster 的 max_sold
-        trans_cluster_v: 為 cluster data （單位可能是 group/貨號）
-    """
-    scenario_probability = trans_with_cluster['cluster_kind'].value_counts(
+def predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_solds ,data_list, start_date, end_date, discount_rate=np.arange(0.5, 1, 0.1), origin_price=2880, min_sold=0, debug_mode=True):
+    scenario_probability = trans_with_cluster_group['cluster_kind'].value_counts(
         normalize=True)
     if debug_mode:
-        print(trans_with_cluster)
-        # print(trans_cluster_v.pivot_table(index='cluster_kind', aggfunc={
-        #     ('數量', 'count'): np.sum, ('數量', 'sum'): np.sum, ('建議售價', 'mean'): np.mean, ('販售時間', ''): np.mean}))
+        print(trans_with_cluster_item)
+        print(trans_with_cluster_group)
         print(scenario_probability)
 
     # do demand estimation for each scenario
     demand_prob = {}
     flow_dic, trans_dic, trans_data = data_list
-    for i in trans_with_cluster['cluster_kind'].unique():
+    for i in trans_with_cluster_group['cluster_kind'].unique():
         demand_prob[i] = {}
         print("----- predicting cluster", i, "-----")
-        max_sold = int(
-            trans_with_cluster.loc[trans_with_cluster['cluster_kind'] == i, '數量'].quantile(0.95))
+        # max_sold = int(
+        #     trans_with_cluster_item.loc[trans_with_cluster_item['cluster_kind'] == i, '數量'].quantile(0.95))
+        max_sold = max_solds[i]
         # slice data and get transaction records that belong to cluster i
-        groups_in_cluster = trans_with_cluster.loc[trans_with_cluster['cluster_kind'] == i]['貨號'].unique(
-        )
-        print("there are", len(groups_in_cluster), "groups")
-        trans = trans_data.loc[trans_data['貨號'].isin(
-            groups_in_cluster)]
+        trans = find_prediction_group(
+            trans_data, trans_with_cluster_group.loc[trans_with_cluster_group['cluster_kind'] == i], 'best-selling')
+        # print(trans)
+        groups_in_cluster = trans['貨號'].unique()
 
         agg_lambda = pd.DataFrame(index=pd.date_range(start_date, end_date))
         for d in discount_rate:
@@ -109,7 +103,8 @@ def predict_demand_dist(max_sold_list, trans_with_cluster, data_list, start_date
         agg_lambda['單據日期'] = agg_lambda.index
         agg_lambda, _ = agg_weekly_data(agg_lambda, False)
         agg_lambda.drop(['單據日期', 'week_day', 'year'], axis=1, inplace=True)
-        agg_lambda_pivot = agg_lambda.pivot_table(index='week', aggfunc=np.sum)
+        agg_lambda_pivot = agg_lambda.pivot_table(
+            index='week', aggfunc=np.sum)
         if debug_mode:
             print(agg_lambda)
             print(agg_lambda_pivot)
@@ -139,10 +134,10 @@ def main():
     period_num = math.floor((end_date-start_date).days/7)
     buy_cost = 900
 
-    trans_cluster, data_list = do_cluster(3)
+    trans_with_cluster_group, data_list = do_cluster(3)
     # print(trans_cluster[['group_name', 'cluster_kind']])
     cluster_group_dic = {v['group_name'].values[0]: v['cluster_kind'].values[0]
-                         for i, v in trans_cluster[['group_name', 'cluster_kind']].iterrows()}
+                         for i, v in trans_with_cluster_group[['group_name', 'cluster_kind']].iterrows()}
     # print(cluster_group_dic)
     data_list[2]['cluster_kind'] = data_list[2]['group_name'].map(
         cluster_group_dic)
@@ -150,30 +145,33 @@ def main():
     cluster_id_dic = {v['貨號']: v['cluster_kind'] for i, v in data_list[2][[
         'cluster_kind', '貨號']].drop_duplicates().iterrows()}
     # print(cluster_id_dic)
-    trans_cluster_v = data_list[2][['數量', '貨號']].groupby(
+    trans_with_cluster_item = data_list[2][['數量', '貨號']].groupby(
         '貨號').agg({'數量': sum}).reset_index()
-    trans_cluster_v['cluster_kind'] = trans_cluster_v['貨號'].map(cluster_id_dic)
+    trans_with_cluster_item['cluster_kind'] = trans_with_cluster_item['貨號'].map(
+        cluster_id_dic)
     # print(trans_cluster)
     # for k in trans_cluster['cluster_kind'].unique():
     #     max_q = int(trans_cluster.loc[trans_cluster['cluster_kind'] == k, '數量'].quantile(0.95))
     #     min_q = int(trans_cluster.loc[trans_cluster['cluster_kind'] == k, '數量'].quantile(0.05))
     #     print(max_q, min_q)
     total_buy_name = {}
-    for k, v in predict_demand_dist(trans_cluster_v, trans_cluster, data_list, start_date=datetime(2021, 1, 1), end_date=datetime(2021, 3, 8), discount_rate=discount_rate, origin_price=origin_price).items():
+    for k, v in predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, data_list, start_date=datetime(2021, 1, 1), end_date=datetime(2021, 3, 8), discount_rate=discount_rate, origin_price=origin_price).items():
         print("demand distribution of cluster", k)
         # print(v)
         # print(v.keys())
         print("-")
         max_q = int(
-            trans_cluster_v.loc[trans_cluster_v['cluster_kind'] == k, '數量'].quantile(0.95))
+            trans_with_cluster_item.loc[trans_with_cluster_item['cluster_kind'] == k, '數量'].quantile(0.95))
         min_q = int(
-            trans_cluster_v.loc[trans_cluster_v['cluster_kind'] == k, '數量'].quantile(0.05))
+            trans_with_cluster_item.loc[trans_with_cluster_item['cluster_kind'] == k, '數量'].quantile(0.05))
         buy_num, model = find_best_quantity(
             v, max_sold, origin_price, period_num, buy_cost, max_q=max_q, min_q=min_q, interval=10)
         print(buy_num, model.total_reward)
         model.export_result('best_policy_'+str(k))
+
         total_buy_name[k] = [buy_num, model.total_reward]
-    pd.DataFrame.from_dict(total_buy_name, orient='index', columns=['order quantity', 'expexted revenue']).to_excel(path.to_new_output_file('order_quantity.xlsx'))
+    pd.DataFrame.from_dict(total_buy_name, orient='index', columns=[
+                           'order quantity', 'expexted revenue']).to_excel(path.to_new_output_file('order_quantity.xlsx'))
 
     print("time: %.2f seconds" % (time.time() - start_time))
 
