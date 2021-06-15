@@ -67,6 +67,7 @@ def cluster(transaction_data, num=3):
     sns.scatterplot(y="售出次數", x="販售時間", data=df,  hue='cluster', ax=axes[1])
     sns.scatterplot(y="售出總數", x="建議售價", data=df,  hue='cluster', ax=axes[2])
     fig.savefig(path.to_new_output_file('test.png'))
+    fig.clf()
 
     ttl_num_df['cluster_kind'] = kmeans.labels_
     return (ttl_num_df)
@@ -150,7 +151,7 @@ def remove_outlier(data: list, method='hampel'):
     if method == 'winsorizie':
         result = winsorize(data, limits=[0.05, 0.05], inclusive=(False, False))
     if method == 'hampel':
-        result = hampel(data, window_size=5, n=3, imputation=True)
+        result = hampel(data, window_size=7, n=3, imputation=True)
     return list(result)
 
 
