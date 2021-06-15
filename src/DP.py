@@ -4,6 +4,7 @@ import pickle as pkl
 
 # from data_preprocessing import *
 from dir_config import DirConfig
+from .plot import *
 path = DirConfig()
 
 
@@ -54,7 +55,7 @@ class DynamicProgramming:
 
         action_set = A
         for t in range(1, self.period_num + 1):
-            
+
             V[t] = {}
             V_record[t] = {}
             best_action[t] = {}
@@ -105,7 +106,6 @@ class DynamicProgramming:
         data = pd.DataFrame.from_dict(action_data, orient='index').iloc[1:, 1:]
         value_data = pd.DataFrame.from_dict(value_data, orient='index')
 
-        
         self.data = data
         self.value_data = value_data
         self.V_record = V_record
@@ -121,7 +121,11 @@ class DynamicProgramming:
             pkl.dump(self, handle, protocol=pkl.HIGHEST_PROTOCOL)
         with pd.ExcelWriter(path.to_new_output_file(name+".xlsx"), engine='xlsxwriter') as writer:
             self.data.to_excel(writer, sheet_name="action")
+            plot_dp_result(self.data, type='action', state=max(
+                self.data.index), period=max(self.data.columns))
             self.value_data.to_excel(writer, sheet_name="value")
+            plot_dp_result(self.data, type='profit', state=max(
+                self.data.index), period=max(self.data.columns))
             # for t, plan in self.V_record.items():
             #     print(t)
             #     period_data = pd.DataFrame.from_dict(
@@ -131,6 +135,7 @@ class DynamicProgramming:
             #     print(self.best_action[t].values())
             #     period_data['best_action'] = self.best_action[t].values()
             #     period_data.to_excel(writer, sheet_name="period_" + str(t))
+
 
 def find_best_quantity(lambda_dict, max_sold, price, period_num, buy_cost, max_q, min_q=0, interval=10):
     '''
@@ -142,7 +147,7 @@ def find_best_quantity(lambda_dict, max_sold, price, period_num, buy_cost, max_q
     inter = (max_q - min_q)//interval
     test = list(range(min_q, max_q+1, inter))
     test_rev = []
-    
+
     prom_rate_list = list(lambda_dict[1].keys())
     for i in test:
         max_sold = min(100, i)
@@ -172,7 +177,6 @@ def find_best_quantity(lambda_dict, max_sold, price, period_num, buy_cost, max_q
     print(test2_rev)
     largest = test2_rev.index(max(test2_rev))
     return test_2[largest], models[largest]
-
 
 
 if __name__ == '__main__':

@@ -4,11 +4,13 @@ import time
 from scipy.stats import poisson
 import math
 import operator
+import pickle
 
 from .DP import DynamicProgramming, find_best_quantity
 from dir_config import DirConfig
 from .data_preprocessing import *
 from .demand_estimation import *
+from .plot import *
 
 path = DirConfig()
 
@@ -25,7 +27,10 @@ def do_cluster(num=3):
     return trans_with_cluster, [flow_dic, trans_dic, trans_data]
 
 
-def predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_solds ,data_list, start_date, end_date, discount_rate=np.arange(0.5, 1, 0.1), origin_price=2880, min_sold=0, debug_mode=True):
+def predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_solds, data_list, start_date, end_date, discount_rate=np.arange(0.5, 1, 0.1), origin_price=2880, min_sold=0, rerun=False, debug_mode=True):
+    if not rerun:
+        return pd.read_pickle(path.to_new_output_file('demand_prob.pkl')), None
+
     scenario_probability = trans_with_cluster_group['cluster_kind'].value_counts(
         normalize=True)
     if debug_mode:
@@ -35,6 +40,7 @@ def predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_s
 
     # do demand estimation for each scenario
     demand_prob = {}
+    demand_exp = {}
     flow_dic, trans_dic, trans_data = data_list
     for i in trans_with_cluster_group['cluster_kind'].unique():
         demand_prob[i] = {}
@@ -49,8 +55,12 @@ def predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_s
         groups_in_cluster = trans['貨號'].unique()
 
         agg_lambda = pd.DataFrame(index=pd.date_range(start_date, end_date))
+        arima_lambda = pd.DataFrame(index=pd.date_range(start_date, end_date))
+        lm_lambda = pd.DataFrame(index=pd.date_range(start_date, end_date))
         for d in discount_rate:
             agg_lambda[d] = 0
+            arima_lambda[d] = 0
+            lm_lambda[d] = 0
         for g in trans['客戶名稱'].unique():
             # aggregate data and train/test split
             channel_trans = trans.loc[trans['客戶名稱'] == g]
@@ -82,8 +92,15 @@ def predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_s
                 arima_pred = arima.predict(
                     period=periods, regressors=np.array([d, origin_price]*periods).reshape(-1, 2))
                 arima_mse = arima.MSE(arima_pred[:len(testing)], testing['數量'])
+                arima_lambda[d] += np.array(arima_pred) / \
+                    len(groups_in_cluster)
+                # print(np.array(arima_pred))
                 lm_pred, lm_mse = lm.predict_sales_daily(
                     testing['數量'], d, origin_price, traffic_pred, start_date, end_date)
+                # print(lm_pred['數量_pred'])
+                lm_lambda[d] += np.array(lm_pred['數量_pred']) / \
+                    len(groups_in_cluster)
+
                 pred = weighted_average(np.array([lm_mse, arima_mse]), np.array(
                     [lm_pred['數量_pred'], arima_pred]))
 
@@ -96,9 +113,17 @@ def predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_s
                       arima.box_pierce_test(), end=", ")
                 print("MSE =", arima_mse)
 
-        # 在折扣為 d 時的，一個組合平均未來每一天的 lambda
-        # for d in discount_rate:
-        #     agg_lambda[d] = agg_lambda[d] / len(groups_in_cluster)
+        # plot
+        trans_all = fill_daily_na(agg_daily_data(trans))
+        training, testing = train_test_split(trans_all)
+        training['數量'] = remove_outlier(training['數量'])
+        training.set_index('單據日期', inplace=True)
+        testing.set_index('單據日期', inplace=True)
+        for d in discount_rate:
+            prediction = pd.DataFrame(
+                {'ARIMA': arima_lambda[d], 'LM': lm_lambda[d]})
+            plot_demand(str(i)+'_'+str(d),
+                        training['數量'], testing['數量'], prediction)
 
         # trasform the predicted lambda into the demand distribution
         agg_lambda['單據日期'] = agg_lambda.index
@@ -114,6 +139,7 @@ def predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_s
         transpose_lambda.drop(0, axis=1, inplace=True)
         if debug_mode:
             print(transpose_lambda)
+        demand_exp[i] = transpose_lambda
         for t in transpose_lambda.columns:
             demand_prob[i][t] = {}
             for d in transpose_lambda.index:
@@ -121,7 +147,11 @@ def predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_s
                     x, max(0, transpose_lambda.loc[d, t])) for x in range(min_sold, max_sold)]))
                 demand_prob[i][t][d][max_sold] = max(
                     0, 1 - poisson.cdf(max_sold-1, max(0, transpose_lambda.loc[d, t])))
-    return demand_prob
+
+    with open(path.to_new_output_file('demand_prob.pkl'), 'wb') as handle:
+        pickle.dump(demand_prob, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    return demand_prob, demand_exp
 
 
 def main(clus_num=3, mode='EV'):
@@ -157,13 +187,14 @@ def main(clus_num=3, mode='EV'):
         cluster_id_dic)
     max_percent = 0.95
     min_percent = 0.05
-    probs = trans_with_cluster_item[['cluster_kind', '貨號']].groupby('cluster_kind').count() / trans_with_cluster_item.shape[0]
+    probs = trans_with_cluster_item[['cluster_kind', '貨號']].groupby(
+        'cluster_kind').count() / trans_with_cluster_item.shape[0]
     probs = probs.to_dict()['貨號']
     cluster_kinds = trans_with_cluster_item['cluster_kind'].unique()
     if mode == 'EV' or mode == 'DEP':
         # 機率以 ev 方式加總
         max_q = int(trans_with_cluster_item['數量'].quantile(max_percent))
-        max_solds = {k:max_q  for k in cluster_kinds}
+        max_solds = {k: max_q for k in cluster_kinds}
         min_q = int(trans_with_cluster_item['數量'].quantile(min_percent))
         min_solds = {k: min_q for k in cluster_kinds}
     else:
@@ -171,9 +202,12 @@ def main(clus_num=3, mode='EV'):
         max_solds = {}
         min_solds = {}
         for k in cluster_kinds:
-            max_solds[k] = int(trans_with_cluster_item.loc[trans_with_cluster_item['cluster_kind'] == k, '數量'].quantile(max_percent))
-            min_solds[k] = int(trans_with_cluster_item.loc[trans_with_cluster_item['cluster_kind'] == k, '數量'].quantile(min_percent))
-    demand_dic = predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_solds, data_list, start_date=datetime(2021, 1, 1), end_date=datetime(2021, 3, 8), discount_rate=discount_rate, origin_price=origin_price)
+            max_solds[k] = int(
+                trans_with_cluster_item.loc[trans_with_cluster_item['cluster_kind'] == k, '數量'].quantile(max_percent))
+            min_solds[k] = int(
+                trans_with_cluster_item.loc[trans_with_cluster_item['cluster_kind'] == k, '數量'].quantile(min_percent))
+    demand_dic, _ = predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_solds, data_list, start_date=datetime(
+        2021, 1, 1), end_date=datetime(2021, 3, 8), discount_rate=discount_rate, origin_price=origin_price)
     if mode == 'EV':
         ev_demand_dic = {}
         for t in demand_dic[0].keys():
@@ -185,7 +219,7 @@ def main(clus_num=3, mode='EV'):
                     for k in cluster_kinds:
                         ev_demand_dic[t][p][q] += demand_dic[k][t][p][q] * probs[k]
         buy_num, model = find_best_quantity(
-                ev_demand_dic, max_sold, origin_price, period_num, buy_cost, max_q=max_solds[k], min_q=min_solds[k], interval=10)
+            ev_demand_dic, max_sold, origin_price, period_num, buy_cost, max_q=max_solds[k], min_q=min_solds[k], interval=10)
         model.export_result('best_policy_EV')
         print('購買量：', buy_num)
     elif mode == 'DEP':
@@ -199,27 +233,28 @@ def main(clus_num=3, mode='EV'):
 
             for k in cluster_kinds:
                 model = DynamicProgramming(demand_dic[k], prom_rate_list, i, min(100, i),
-                                   origin_price, period_num=period_num)
+                                           origin_price, period_num=period_num)
                 rev = model.run() - buy_cost * i
                 total_buy_name[i].append(rev)
-                buy_rev_ev[i]  += rev*probs[k]
+                buy_rev_ev[i] += rev*probs[k]
             total_buy_name[i].append(buy_rev_ev[i])
-                
-        
-                # total_rev += rev*probs[k]
-        df = pd.DataFrame.from_dict(total_buy_name, orient='index', columns=list(cluster_kinds)+['expected'])
+
+            # total_rev += rev*probs[k]
+        df = pd.DataFrame.from_dict(
+            total_buy_name, orient='index', columns=list(cluster_kinds)+['expected'])
         df.to_excel(path.to_new_output_file('DEP_order_quantity.xlsx'))
         largest = max(buy_rev_ev.items(), key=operator.itemgetter(1))[0]
         print('購買量：', largest)
         revs = []
         for k in cluster_kinds:
             model = DynamicProgramming(demand_dic[k], prom_rate_list, largest, min(100, largest),
-                                    origin_price, period_num=period_num)
+                                       origin_price, period_num=period_num)
             rev = model.run() - buy_cost * i
             revs.append(rev)
             model.export_result('best_policy_DEP_'+str(k))
-        pd.DataFrame([[largest]*len(cluster_kinds+1),[probs[i] for i in probs] + [1], revs+[buy_rev_ev[largest]]], index=['訂購量', '機率', 'revenue'], columns=list(cluster_kinds)+['expected']).to_excel('DEP_best_ev.xlsx')
-        
+        pd.DataFrame([[largest]*len(cluster_kinds+1), [probs[i] for i in probs] + [1], revs+[buy_rev_ev[largest]]],
+                     index=['訂購量', '機率', 'revenue'], columns=list(cluster_kinds)+['expected']).to_excel('DEP_best_ev.xlsx')
+
     else:
         total_buy_name = {}
         for k, v in demand_dic.items():
@@ -238,10 +273,10 @@ def main(clus_num=3, mode='EV'):
 
             total_buy_name[k] = [buy_num, model.total_reward]
         pd.DataFrame.from_dict(total_buy_name, orient='index', columns=[
-                            'order quantity', 'expexted revenue']).to_excel(path.to_new_output_file('order_quantity.xlsx'))
+            'order quantity', 'expexted revenue']).to_excel(path.to_new_output_file('order_quantity.xlsx'))
 
     print("time: %.2f seconds" % (time.time() - start_time))
 
 
 if __name__ == '__main__':
-    main(mode='DEP')
+    main(mode='EV')
