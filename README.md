@@ -59,30 +59,29 @@ The target of this demand estimating step is to obtain the daily prediction amou
 Correspondingly, we may use this prediction result as the expected value, which is denoted as $\lambda_t$, to build the daily demand distribution by Poisson distribution.
 
 #### Linear Regression
-Linear Regression is a very common way to build forecasting model.
+Linear Regression is a very common way to build a forecasting model.
 Since the main focus of this document is not the on the regression method, further introduction of Linear Regression please refer to [here](https://en.wikipedia.org/wiki/Linear_regression).
 
-Notice that one of the main purposes of our research is to find the best pricing strategy (discount plan), it is important to find the price sensitivity of the demand, and Linear Regression provides a simpliest approach to do the analysis.
+Notice that one of the main purposes of our research is to find the best pricing strategy (discount plan), it is important to find the price sensitivity of the demand, and Linear Regression provides a simpler approach to do the analysis.
 This method may also include many independent variables, such as viewing count and special holidays, to jointly address their impact on the demand.
 Besides, the explainable coefficients that Linear Regression generates provide a way to check the rationality of our data.
-For example, we can check whether the prediction result is reasonable by observing the coefficient of the price.
-If the estimated coefficient of the price is negative, which means that the demand declines when the price is increasing, then the prediction result is acceptable. 
+For example, we can check whether the prediction is reasonable by observing the coefficient of the price.
+If the estimated coefficient of the price is negative, which means that the demand declines when the price is increasing, then the prediction is acceptable. 
 #### ARIMA Regression
-Time series approach is also a commonly used method to construct forecasting model.
+The time series approach is also a commonly used method to construct a forecasting model.
 In this study, we use Autoregressive integrated moving average model.
 The most important part to build an ARIMA model is to tuning the parameters $(p, d, q)$.
 The parameter $p$ represents the auto-regressive term, $d$ represents the degree of differencing, and $q$ represents the moving average term.
-The steps of building an ARIMA model are summurized as below.
+The steps of building an ARIMA model are summarized as below.
 
-1. Statistcally testing whether the time series is stationary. If not, do differencing until the time series become stationary.The degree of differencing is thus becomes the parameter $d$.
+1. Statistically testing whether the time series is stationary. If not, do differencing until the time series becomes stationary.The degree of differencing is thus becoming the parameter $d$.
 
-2. Draw the ACF and PACF figures for the data. By observing the figures, find the possible cominations of parameters $p$ and $q$.
+2. Draw the ACF and PACF figures for the data. By observing the figures, find the possible combinations of parameters $p$ and $q$.
+
+3. Build models for different parameter combinations. Choose the model with the smallest AIC as the final model.
 
 
-3. Build models for different parameter combinations. Choose the model with smallest AIC as the final model.
-
-
-Besides, ARIMA regression model may also include some regressors, which allows us to take other independent variables' impact on the demand into account.
+Besides, a ARIMA regression model may also include some regressors, which allows us to take other independent variables' impact on the demand into account.
 By doing so, we use this model to generate the prediction result and further build the demand distribution.
 Again, since we do not put our focus on the introduction of the demand estimating method, further details about ARIMA please refer to [here](https://en.wikipedia.org/wiki/Autoregressive_integrated_moving_average).
 Our implemenation details can be found in the section [Example and Applications](#example-and-applications).
