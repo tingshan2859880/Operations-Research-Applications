@@ -124,8 +124,8 @@ class DynamicProgramming:
             plot_dp_result(self.data, type='action', state=max(
                 self.data.index), period=max(self.data.columns))
             self.value_data.to_excel(writer, sheet_name="value")
-            plot_dp_result(self.data, type='profit', state=max(
-                self.data.index), period=max(self.data.columns))
+            plot_dp_result(self.value_data, type='profit', state=max(
+                self.value_data.index), period=max(self.value_data.columns))
             # for t, plan in self.V_record.items():
             #     print(t)
             #     period_data = pd.DataFrame.from_dict(

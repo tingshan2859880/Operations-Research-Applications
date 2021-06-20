@@ -31,7 +31,7 @@ def predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_s
     if not rerun:
         return pd.read_pickle(path.to_new_output_file('demand_prob.pkl')), None
 
-    scenario_probability = trans_with_cluster_group['cluster_kind'].value_counts(
+    scenario_probability = trans_with_cluster_item['cluster_kind'].value_counts(
         normalize=True)
     if debug_mode:
         print(trans_with_cluster_item)

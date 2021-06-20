@@ -53,5 +53,8 @@ def plot_dp_result(result, type='action', state=None, period=None):
 
 
 if __name__ == '__main__':
-    flow_dic, trans_dic, trans_data = read_data()
-    train, test = train_test_split(trans_data)
+    demand_prob = pd.read_pickle(path.to_new_output_file('demand_prob.pkl'))
+    temp = demand_prob[0][1]
+    print(pd.DataFrame.from_dict(temp))
+    # flow_dic, trans_dic, trans_data = read_data()
+    # train, test = train_test_split(trans_data)
