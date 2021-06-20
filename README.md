@@ -48,9 +48,53 @@ Our methodology consists of two parts, which are demand estimating and two-stage
 The following explains them in more details.
 
 ### Demand Estimating
+Assumed that the demand distribution follows Poisson distribution.
+Since the transaction amount of commodities in a retailing channel is quite small, it is more suitable to estimate the demand by using a discrete distribution.
+Besides, Poisson distribution only needs one parameter, the expected value $\lambda$, which is more convenient for us to estimate comparing to other distribution.
+These two properties explain why we do the assumption.
+
+There are several ways to estimate the demand.
+In this study, we choose the Linear Regression and Autoregressive Integrated Moving Average (ARIMA) Regression to do the estimation, and thus we combine the prediction values of the two regression models to generate the final prediction result.
+The target of this demand estimating step is to obtain the daily prediction amount of the demand.
+Correspondingly, we may use this prediction result as the expected value, which is denoted as $\lambda_t$, to build the daily demand distribution by Poisson distribution.
+
+#### Linear Regression
+Linear Regression is a very common way to build forecasting model.
+Since the main focus of this document is not the on the regression method, further introduction of Linear Regression please refer to [here](https://en.wikipedia.org/wiki/Linear_regression).
+
+Notice that one of the main purposes of our research is to find the best pricing strategy (discount plan), it is important to find the price sensitivity of the demand, and Linear Regression provides a simpliest approach to do the analysis.
+This method may also include many independent variables, such as viewing count and special holidays, to jointly address their impact on the demand.
+Besides, the explainable coefficients that Linear Regression generates provide a way to check the rationality of our data.
+For example, we can check whether the prediction result is reasonable by observing the coefficient of the price.
+If the estimated coefficient of the price is negative, which means that the demand declines when the price is increasing, then the prediction result is acceptable. 
+#### ARIMA Regression
+Time series approach is also a commonly used method to construct forecasting model.
+In this study, we use Autoregressive integrated moving average model.
+The most important part to build an ARIMA model is to tuning the parameters $(p, d, q)$.
+The parameter $p$ represents the auto-regressive term, $d$ represents the degree of differencing, and $q$ represents the moving average term.
+The steps of building an ARIMA model are summurized as below.
+
+1. Statistcally testing whether the time series is stationary. If not, do differencing until the time series become stationary.The degree of differencing is thus becomes the parameter $d$.
+
+2. Draw the ACF and PACF figures for the data. By observing the figures, find the possible cominations of parameters $p$ and $q$.
+
+
+3. Build models for different parameter combinations. Choose the model with smallest AIC as the final model.
+
+
+Besides, ARIMA regression model may also include some regressors, which allows us to take other independent variables' impact on the demand into account.
+By doing so, we use this model to generate the prediction result and further build the demand distribution.
+Again, since we do not put our focus on the introduction of the demand estimating method, further details about ARIMA please refer to [here](https://en.wikipedia.org/wiki/Autoregressive_integrated_moving_average).
+Our implemenation details can be found in the section [Example and Applications](#example-and-applications).
+
+
+
+
+
 
 ### Two-stage Stochastic Dynamic Programming
-In first stage, we determine the ordering quantity. In next stage, we use Stochastic Dynamic Programming to find the optimized discount plan and its corresponding expected revenue.
+In the first stage, we determine the ordering quantity.
+In next stage, we use Stochastic Dynamic Programming to find the optimized discount plan and its corresponding expected revenue.
 
 
 ### Example and Applications
