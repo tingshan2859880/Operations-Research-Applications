@@ -94,28 +94,31 @@ Our implemenation details can be found in the section [Example and Applications]
 ### Two-stage Stochastic Dynamic Programming
 In the first stage, we determine the ordering quantity.
 In next stage, we use Stochastic Dynamic Programming to find the optimized discount plan and its corresponding expected revenue.
+<!-- t3 -->
 
 
 ### Example and Applications
 <!-- give a small and understandable example for python illustration. The example could include dataset, define variables, introduce solver, set up experiments, clarify the numerical analysis result, or provide some managerial implications. -->
+<!-- 1t -->
 
 ### Comments
 <!-- What’s your comment or insights to the topic/methodologies you introduced? -->
+<!-- 1t -->
+* complex method combined presciptive and predictive 
+* 應用情境：補強在哪裡，像是 cluster 方法太粗糙
+* demand 考慮 time series/ data 不夠好，無法顯示出我們的，使用 discount rate
+* stochatic dynamic programming: 考慮 inventory cost 也考慮了 salvage value , demand uncertainty -> pricing strategy
+* two-stage: compared the typical EV and DEP, and find that unpopular and popular differ largely. So, what scenrio the product is simlar to is a very important problem. decision makers can take result as a reference.
+* future works:
+    * taking time of delievery into account
+    * backlogging
+    * salvage value
+
 
 ### Reference
 <!-- Show all your reference cited in your GitHub page. -->
+* Elmaghraby, W., & Keskinocak, P. (2003). Dynamic pricing in the presence of inventory considerations: Research overview, current practices, and future directions. Management science, 49(10), 1287-1309.
+* Den Boer, A. V. (2015). Dynamic pricing and learning: historical origins, current research, and new directions. Surveys in operations research and management science, 20(1), 1-18.
+* Fattah, J., Ezzine, L., Aman, Z., El Moussami, H., & Lachhab, A. (2018). Forecasting of demand using ARIMA model. International Journal of Engineering Business Management, 10
 
-
-
-
-
-
-
-
-## 研究目標
-
-
-## 研究方法
-
-## Reference
 
