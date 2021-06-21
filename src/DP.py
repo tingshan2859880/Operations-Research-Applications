@@ -122,10 +122,10 @@ class DynamicProgramming:
         with pd.ExcelWriter(path.to_new_output_file(name+".xlsx"), engine='xlsxwriter') as writer:
             self.data.to_excel(writer, sheet_name="action")
             plot_dp_result(self.data, type='action', state=max(
-                self.data.index), period=max(self.data.columns))
+                self.data.index), period=max(self.data.columns), name=name)
             self.value_data.to_excel(writer, sheet_name="value")
-            plot_dp_result(self.data, type='profit', state=max(
-                self.data.index), period=max(self.data.columns))
+            plot_dp_result(self.value_data, type='profit', state=max(
+                self.value_data.index), period=max(self.value_data.columns), name=name)
             # for t, plan in self.V_record.items():
             #     print(t)
             #     period_data = pd.DataFrame.from_dict(
@@ -172,7 +172,7 @@ def find_best_quantity(lambda_dict, max_sold, price, period_num, buy_cost, max_q
         model = DynamicProgramming(lambda_dict, prom_rate_list, i, max_sold,
                                    price, period_num=period_num)
         rev = model.run()
-        test2_rev.append(rev)
+        test2_rev.append(rev - buy_cost * i)
         models.append(model)
     print(test2_rev)
     largest = test2_rev.index(max(test2_rev))

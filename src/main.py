@@ -153,6 +153,13 @@ def predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_s
 
     return demand_prob, demand_exp
 
+def caculate_expected_revenue(cluster_kinds, buy_num, probs, demand_dic, origin_price, period_num, prom_rate_list, buy_cost):
+    buy_rev_ev = 0
+    for k in cluster_kinds:
+        model = DynamicProgramming(demand_dic[k], prom_rate_list, buy_num, min(100, buy_num), origin_price, period_num=period_num)
+        rev = model.run() - buy_cost * buy_num
+        buy_rev_ev += rev*probs[k]
+    return buy_rev_ev
 
 def main(clus_num=3, mode='EV'):
     print('mode:', mode)
@@ -208,6 +215,7 @@ def main(clus_num=3, mode='EV'):
                 trans_with_cluster_item.loc[trans_with_cluster_item['cluster_kind'] == k, '數量'].quantile(min_percent))
     demand_dic, _ = predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_solds, data_list, start_date=datetime(
         2021, 1, 1), end_date=datetime(2021, 3, 8), discount_rate=discount_rate, origin_price=origin_price)
+    prom_rate_list = list(demand_dic[0][1].keys())
     if mode == 'EV':
         ev_demand_dic = {}
         for t in demand_dic[0].keys():
@@ -222,8 +230,9 @@ def main(clus_num=3, mode='EV'):
             ev_demand_dic, max_sold, origin_price, period_num, buy_cost, max_q=max_solds[k], min_q=min_solds[k], interval=10)
         model.export_result('best_policy_EV')
         print('購買量：', buy_num)
+        total_buy_name = {}
+        total_buy_name['EV'] = [buy_num, caculate_expected_revenue(cluster_kinds, buy_num, probs, demand_dic, origin_price, period_num, prom_rate_list, buy_cost)]
     elif mode == 'DEP':
-        prom_rate_list = list(demand_dic[0][1].keys())
         total_buy_name = {}
         buy_rev_ev = {}
         total_buy_name[-1] = [probs[i] for i in probs] + [1]
@@ -243,19 +252,22 @@ def main(clus_num=3, mode='EV'):
         df = pd.DataFrame.from_dict(
             total_buy_name, orient='index', columns=list(cluster_kinds)+['expected'])
         df.to_excel(path.to_new_output_file('DEP_order_quantity.xlsx'))
-        largest = max(buy_rev_ev.items(), key=operator.itemgetter(1))[0]
-        print('購買量：', largest)
+        buy_num = max(buy_rev_ev.items(), key=operator.itemgetter(1))[0]
+        print('購買量：', buy_num)
+        total_buy_name = {}
+        total_buy_name['DEP'] = [buy_num, buy_rev_ev[buy_num]]
         revs = []
         for k in cluster_kinds:
-            model = DynamicProgramming(demand_dic[k], prom_rate_list, largest, min(100, largest),
+            model = DynamicProgramming(demand_dic[k], prom_rate_list, buy_num, min(100, buy_num),
                                        origin_price, period_num=period_num)
-            rev = model.run() - buy_cost * i
+            rev = model.run() - buy_cost * buy_num
             revs.append(rev)
             model.export_result('best_policy_DEP_'+str(k))
-        pd.DataFrame([[largest]*len(cluster_kinds+1), [probs[i] for i in probs] + [1], revs+[buy_rev_ev[largest]]],
-                     index=['訂購量', '機率', 'revenue'], columns=list(cluster_kinds)+['expected']).to_excel('DEP_best_ev.xlsx')
+        pd.DataFrame([[buy_num]*len(cluster_kinds+1), [probs[i] for i in probs] + [1], revs+[buy_rev_ev[buy_num]]],
+                     index=['訂購量', '機率', 'revenue'], columns=list(cluster_kinds)+['expected']).to_excel(path.to_new_output_file('DEP_best_ev.xlsx'))
 
     else:
+        total_buy_name_ev = {}
         total_buy_name = {}
         for k, v in demand_dic.items():
             print("demand distribution of cluster", k)
@@ -271,12 +283,19 @@ def main(clus_num=3, mode='EV'):
             print(buy_num, model.total_reward)
             model.export_result('best_policy_'+str(k))
 
-            total_buy_name[k] = [buy_num, model.total_reward]
-        pd.DataFrame.from_dict(total_buy_name, orient='index', columns=[
+            total_buy_name_ev[k] = [buy_num, model.total_reward]
+            total_buy_name[k] = [buy_num, caculate_expected_revenue(cluster_kinds, buy_num, probs, demand_dic, origin_price, period_num, prom_rate_list, buy_cost)]
+        pd.DataFrame.from_dict(total_buy_name_ev, orient='index', columns=[
             'order quantity', 'expexted revenue']).to_excel(path.to_new_output_file('order_quantity.xlsx'))
+            
 
     print("time: %.2f seconds" % (time.time() - start_time))
+    return total_buy_name
 
 
 if __name__ == '__main__':
-    main(mode='EV')
+    EV_dic = main(mode='EV')
+    DEP_dic = main(mode='DEP')
+    SA_dic = main(mode='SA')
+    final = {**EV_dic, **DEP_dic, **SA_dic}
+    pd.DataFrame.from_dict(final, orient='index').to_excel(path.to_new_output_file('SP_summary.xlsx'))

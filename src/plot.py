@@ -30,7 +30,7 @@ def plot_demand(filename, training: pd.Series, testing: pd.Series, pred: pd.Data
     plt.close()
 
 
-def plot_dp_result(result, type='action', state=None, period=None):
+def plot_dp_result(result, type='action', state=None, period=None, save=True, name='dp'):
     if period != None:
         plt.plot(result[period], '-o')
         plt.xlabel('state')
@@ -39,7 +39,9 @@ def plot_dp_result(result, type='action', state=None, period=None):
         else:
             plt.ylabel("expected profit")
         plt.title("inventory level = " + str(state) + ", inventory cost = 0.1")
-        plt.show()
+        # plt.show()
+        plt.savefig(path.to_dp_fig_file(name+'-'+type+'_state_inv_'+str(state)+'.png'))
+        plt.close('all')
     if state != None:
         plt.plot(result.loc[state], '-o')
         plt.xlabel('period')
@@ -48,7 +50,9 @@ def plot_dp_result(result, type='action', state=None, period=None):
         else:
             plt.ylabel("expected profit")
         plt.title("period = " + str(period) + ", inventory cost = 0.1")
-        plt.show()
+        # plt.show()
+        plt.savefig(path.to_dp_fig_file(name+'-'+type+'_period_inv_'+str(state)+'.png'))
+        plt.close('all')
     return
 
 
