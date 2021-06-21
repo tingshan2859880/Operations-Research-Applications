@@ -10,6 +10,8 @@ class DirConfig:
     new_path = os.path.join(base_dir, 'data', "input")
     new_output_path = os.path.join(base_dir, 'data', "output")
     src_path = os.path.join(base_dir, 'src')
+    fig_path = os.path.join(new_output_path, "fig")
+    dp_fig_path = os.path.join(fig_path, "dp")
 
     def to_new_file(self, file_name):
         return os.path.join(self.new_path, file_name)
@@ -34,3 +36,5 @@ class DirConfig:
         蝦皮 / MOMO / YAHOO
         """
         return os.path.join(self.traffic_path, channel, file_name)
+    def to_dp_fig_file(self, file_name):
+        return os.path.join(self.dp_fig_path, file_name)
