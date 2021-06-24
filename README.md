@@ -126,15 +126,13 @@ As the result, we find EV and recourse have the same order quantity. And, in Sce
 ### Comments
 <!-- What’s your comment or insights to the topic/methodologies you introduced? -->
 <!-- 1t -->
-* complex method combined presciptive and predictive 
-* 應用情境：補強在哪裡，像是 cluster 方法太粗糙
-* demand 考慮 time series/ data 不夠好，無法顯示出我們的，使用 discount rate
-* stochatic dynamic programming: 考慮 inventory cost 也考慮了 salvage value , demand uncertainty -> pricing strategy
-* two-stage: compared the typical EV and DEP, and find that unpopular and popular differ largely. So, what scenrio the product is simlar to is a very important problem. decision makers can take result as a reference.
-* future works:
-    * taking time of delievery into account
-    * backlogging
-    * salvage value
+We provide a methodology combines ordering quality and dynamic pricing decisions. The method combined presciptive and predictive demand estimation and stochastic dynamic programming. About demand estimation, we use typical linear regression and ARIMA considering time influence. About two-stage stochatic dynamic programming, we try to plan a product's best order quantity and next price strategy. In the first stage, it is an linear problem. In second stage, we take salvage value ,demand fluctuation, and inventory cost into account to find optimal pricing strategy. About how to concatenate the two stages caculation, we use three models and compared the results. 
+
+The approaches that we differciate demand scenarios is very simple. About the future work, the decision maker can use the shoe domain knowledge to find greater Differentiation method about demand scenario. About the methodology, we may take time of delievery into account or backlogging into stochastic model. 
+
+
+
+
 
 
 ### Reference
