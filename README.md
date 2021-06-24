@@ -119,6 +119,8 @@ If the demand is smaller than the inventory level, then the transition probabili
 However, if the demand exceeds the inventory level, then the inventory level in the next period ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20s_%7Bn-1%7D) must be 0, and the transition probability becomes the cumulative probability of ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20f%5E%5Comega_n%28a_n%2C%20x%29) for ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20x) from current inventory level ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20s_n) to the maximum selling amount ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20q).
 If all the shoes have been sold out, which is marked as ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20a_n%20%3D%20%5CDelta), the current inventory level and the inventory in the next period must both be 0.
 Therefore, the transition probability is 1.
+The optimality equation of period ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20n) is ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20V_n%28s_n%2C%20%5Comega%29), which equals the expected revenue of the current period plus the expected revenue from future periods.
+Below shows our complete formulation of the second stage DP problem.
 
 <img src="img/stage2_DP.jpg" width="500">
 
