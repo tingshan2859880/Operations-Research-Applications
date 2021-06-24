@@ -98,8 +98,8 @@ In next stage, we use Stochastic Dynamic Programming to find the optimized disco
 
 
 ### Example and Applications
-<!-- give a small and understandable example for python illustration. The example could include dataset, define variables, introduce solver, set up experiments, clarify the numerical analysis result, or provide some managerial implications. -->
-we take anonymized datasets and design a scenario to show our research methods. 
+
+We take anonymized datasets and design a scenario to show our research methods. 
 The example product's origin price is NT 3000 and cost is NT 900. This product just can be sold in 9 weeks with no salvage value. 
 The datasets contain 14 months of sales data and three channels' pageview data. 
 For demand estimation, we split datasets into train and test data with the 2021/1/1 as the boundary. 
@@ -107,11 +107,11 @@ For demand estimation, we split datasets into train and test data with the 2021/
 After simple data preprocessing, we divide the products into three scenarios with K-means considering 4 characteristics: popular (cluster 0), common (cluster 2), and unpopular (cluster 1). The ratio of each kind: 0.22, 0.26, and 0.52, respectively.
 
 ![cluster](img/cluster.png)
-Then we use ARIMA and linear regression to estimate the demand distribution in each scenario and period  considering different discount rate.
-Demand probability distribution of each sceario 𝜔 and period 𝑡.
+Then we use ARIMA and linear regression to estimate the demand distribution in each scenario and period considering the different discount rates.
+Demand probability distribution of each scenario 𝜔 and period 𝑡.
 
 ![cluster](img/Demand_distribution.png)
-The below image presents a brief interview about average demand in each scenario. The result of all scenarios have a similar tendency. When the discount rate is higher, the demand is lower. Moreover, compared to a common or unpopular one, popular has highest average demand in each discount rate.
+The below image presents a brief interview about the average demand in each scenario. The result of all scenarios has a similar tendency. When the discount rate is higher, the demand is lower. Moreover, compared to a common or unpopular one, popular has the highest average demand in each discount rate.
 
 ![cluster](img/3_demand.png)
 
@@ -124,11 +124,10 @@ As the result, we find EV and recourse have the same order quantity. And, in Sce
 ![summary](img/price.png)
 
 ### Comments
-<!-- What’s your comment or insights to the topic/methodologies you introduced? -->
-<!-- 1t -->
-We provide a methodology combines ordering quality and dynamic pricing decisions. The method combined presciptive and predictive demand estimation and stochastic dynamic programming. About demand estimation, we use typical linear regression and ARIMA considering time influence. About two-stage stochatic dynamic programming, we try to plan a product's best order quantity and next price strategy. In the first stage, it is an linear problem. In second stage, we take salvage value ,demand fluctuation, and inventory cost into account to find optimal pricing strategy. About how to concatenate the two stages caculation, we use three models and compared the results. 
 
-The approaches that we differciate demand scenarios is very simple. About the future work, the decision maker can use the shoe domain knowledge to find greater Differentiation method about demand scenario. About the methodology, we may take time of delievery into account or backlogging into stochastic model. 
+We provide a methodology that combines ordering quality and dynamic pricing decisions. The method combined prescriptive and predictive demand estimation and stochastic dynamic programming. About demand estimation, we use typical linear regression and ARIMA considering time influence. About two-stage stochastic dynamic programming, we try to plan a product's best order quantity and next price strategy. In the first stage, it is a linear problem. In the second stage, we take salvage value, demand fluctuation, and inventory cost into account to find an optimal pricing strategy. About how to concatenate the two stages calculation, we use three models and compare the results. 
+
+The approaches that we differentiate demand scenarios are very simple. About the future work, the decision-maker can use the shoe domain knowledge to find a greater Differentiation method about the demand scenario. About the methodology, we may take time of delivery into account or backlogging into the stochastic model. 
 
 
 
