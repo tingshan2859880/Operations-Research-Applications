@@ -1,4 +1,4 @@
-# Demand estimation and dynamic pricing in digital channels:Taking shoes selling as an example
+# Demand estimation and dynamic pricing in digital channels: Taking shoes selling as an example
 
 <!-- 概要：講說不一定的點在哪 -->
 <!-- 使用兩階段 stochastic dynamic Programming 規劃訂貨量和每一期的定價，並以 Arima 和 regression 作為需求估計方法。 -->
@@ -103,7 +103,7 @@ Our implementation details can be found in the section [Example and Applications
 In the first stage, we determine the ordering quantity ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20q).
 Given the wholesale price of the shoes equals ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20W) and scenario ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20%5Comega), our problem is to maximize the expected profit.
 
-![stage1](img/stage1_LP.jpg =100x)
+![stage1](img/stage1_LP.jpg)
 
 The first term represents the total cost of purchasing the commodity.
 The second term is the expected revenue of sales given the ordering quantity and scenario.
