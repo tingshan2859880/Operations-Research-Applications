@@ -1,4 +1,4 @@
-# Demand estimation and dynamic pricing in digital channels: Taking shoes selling as an example
+# Demand estimation and dynamic pricing in digital channels:Taking shoes selling as an example
 
 <!-- 概要：講說不一定的點在哪 -->
 <!-- 使用兩階段 stochastic dynamic Programming 規劃訂貨量和每一期的定價，並以 Arima 和 regression 作為需求估計方法。 -->
@@ -58,13 +58,13 @@ The following explains them in more details.
 ### Demand Estimating
 Assumed that the demand distribution follows Poisson distribution.
 Since the transaction amount of commodities in a retailing channel is quite small, it is more suitable to estimate the demand by using a discrete distribution.
-Besides, Poisson distribution only needs one parameter, the expected value $\lambda$, which is more convenient for us to estimate comparing to other distribution.
+Besides, Poisson distribution only needs one parameter, the expected value ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20%5Clambda), which is more convenient for us to estimate comparing to other distribution.
 These two properties explain why we do the assumption.
 
 There are several ways to estimate the demand.
 In this study, we choose the Linear Regression and Autoregressive Integrated Moving Average (ARIMA) Regression to do the estimation, and thus we combine the prediction values of the two regression models to generate the final prediction result.
 The target of this demand estimating step is to obtain the daily prediction amount of the demand.
-Correspondingly, we may use this prediction result as the expected value, which is denoted as $\lambda_t$, to build the daily demand distribution by Poisson distribution.
+Correspondingly, we may use this prediction result as the expected value, which is denoted as ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20%5Clambda_t), to build the daily demand distribution by Poisson distribution.
 
 #### Linear Regression
 Linear Regression is a very common way to build a forecasting model.
@@ -78,13 +78,13 @@ If the estimated coefficient of the price is negative, which means that the dema
 #### ARIMA Regression
 The time series approach is also a commonly used method to construct a forecasting model.
 In this study, we use Autoregressive integrated moving average model.
-The most important part to build an ARIMA model is to tuning the parameters $(p, d, q)$.
-The parameter $p$ represents the auto-regressive term, $d$ represents the degree of differencing, and $q$ represents the moving average term.
+The most important part to build an ARIMA model is to tuning the parameters ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20%28p%2C%20d%2C%20q%29).
+The parameter ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20p) represents the auto-regressive term, ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20d) represents the degree of differencing, and ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20q) represents the moving average term.
 The steps of building an ARIMA model are summarized as below.
 
-1. Statistically testing whether the time series is stationary. If not, do differencing until the time series becomes stationary.The degree of differencing is thus becoming the parameter $d$.
+1. Statistically testing whether the time series is stationary. If not, do differencing until the time series becomes stationary.The degree of differencing is thus becoming the parameter ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20d).
 
-2. Draw the ACF and PACF figures for the data. By observing the figures, find the possible combinations of parameters $p$ and $q$.
+2. Draw the ACF and PACF figures for the data. By observing the figures, find the possible combinations of parameters ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20p) and ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20q).
 
 3. Build models for different parameter combinations. Choose the model with the smallest AIC as the final model.
 
@@ -100,23 +100,23 @@ Our implementation details can be found in the section [Example and Applications
 
 
 ### Two-stage Stochastic Dynamic Programming
-In the first stage, we determine the ordering quantity ![equation](https://latex.codecogs.com/gif.latex?q).
-Given the wholesale price of the shoes equals $`W`$ and scenario $`\omega`$, our problem is to maximize the expected profit.
+In the first stage, we determine the ordering quantity ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20q).
+Given the wholesale price of the shoes equals ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20W) and scenario ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20%5Comega), our problem is to maximize the expected profit.
 
-![stage1](img/stage1_LP.jpg){:height="50%" width="50%"}
+![stage1](img/stage1_LP.jpg =100x)
 
 The first term represents the total cost of purchasing the commodity.
 The second term is the expected revenue of sales given the ordering quantity and scenario.
 
 In second stage, we use stochastic dynamic programming to find the optimized discount plan and its corresponding expected revenue.
-Suppose that we have total $`N`$ periods.
-In our stochastic dynamic model, the state is the inventory level $`s_n`$, the action is the discount rate $`a_n`$.
-$`r_n(s_n, a_n, \omega)`$ represents the reward function, which consists of the expected revenue plus the inventory cost.
-$`t_n(s_{n-1}, \omega | s_n, a_n)`$ is the transition probability. 
-Notice that the function $`f^\omega_n(a_n, x)`$ is exactly the demand distribution we just estimated, which represents the probability of selling $`x`$ pairs of shoes given the discount rate $`a_n`$.
-If the demand is smaller than the inventory level, then the transition probability of $`s_n`$ to $`s_{n=1}`$ is $`f^\omega_n(a_n, x)`$.
-However, if the demand exceeds the inventory level, then the inventory level in the next period $`s_{n-1}`$ must be 0, and the transition probability becomes the cumulative probability of $`f^\omega_n(a_n, x)`$ for $`x`$ from current inventory level $`s_n`$ to the maximum selling amount $`q`$.
-If all the shoes have been sold out, which is marked as $`a_n = \Delta`$, the current inventory level and the inventory in the next period must both be 0.
+Suppose that we have total ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20N) periods.
+In our stochastic dynamic model, the state is the inventory level ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20s_n), the action is the discount rate ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20a_n).
+![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20r_n%28s_n%2C%20a_n%2C%20%5Comega%29) represents the reward function, which consists of the expected revenue plus the inventory cost.
+![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20t_n%28s_%7Bn-1%7D%2C%20%5Comega%20%7C%20s_n%2C%20a_n%29) is the transition probability. 
+Notice that the function ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20f%5E%5Comega_n%28a_n%2C%20x%29) is exactly the demand distribution we just estimated, which represents the probability of selling ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20x) pairs of shoes given the discount rate ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20a_n).
+If the demand is smaller than the inventory level, then the transition probability of ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20s_n) to ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20s_%7Bn-1%7D) is ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20f%5E%5Comega_n%28a_n%2C%20x%29).
+However, if the demand exceeds the inventory level, then the inventory level in the next period ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20s_%7Bn-1%7D) must be 0, and the transition probability becomes the cumulative probability of ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20f%5E%5Comega_n%28a_n%2C%20x%29) for ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20x) from current inventory level ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20s_n) to the maximum selling amount ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20q).
+If all the shoes have been sold out, which is marked as ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20a_n%20%3D%20%5CDelta), the current inventory level and the inventory in the next period must both be 0.
 Therefore, the transition probability is 1.
 
 ![stage2](img/stage2_DP.jpg)
@@ -140,18 +140,17 @@ The three scenarios are then popular (cluster 0), common (cluster 2), and unpopu
 ![cluster](img/cluster.png)
 
 As aforementioned, we assume that our demand distributions all follow Poisson distribution.
-We then use ARIMA and linear regression to estimate the expected value ($`\lambda`$) of the demand distribution in each scenario 𝜔 and period 𝑡 considering different discount rates.
+We then use ARIMA and linear regression to estimate the expected value ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20%5Clambda) of the demand distribution in each scenario 𝜔 and period 𝑡 considering different discount rates.
 In the linear regression model, the independent variables include "price", "page views", and "whether there are holidays within seven days before and after the day". 
-In the ARIMA model, we set the range of parameter $`p`$ and $`q`$ are in the range of 1 to 3.
+In the ARIMA model, we set the range of parameter ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20p) and ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20q) are in the range of 1 to 3.
 In order not to ignore the impact of the price, we also include "price" and "page views" as the regressors in the ARIMA model.
 By following the steps we mentioned in the previous section, we obtain the model with the smallest AIC.
 
 We them easily combine the predictions from the two models by calculating the weighted average.
 The weights are generated by the mean squared error (MSE) of the two models.
 Since MSE is a the-smaller-the better criteria, we may transform the MSE by using the following formula:
-```math
-    w_{ARIMA} = \frac{\frac{1}{MSE_{ARIMA}}}{\frac{1}{MSE_{ARIMA}} + \frac{1}{MSE_{LM}}} \quad \mbox{and} \quad w_{LM} = \frac{\frac{1}{MSE_{LM}}}{\frac{1}{MSE_{ARIMA}} + \frac{1}{MSE_{LM}}}
-```
+![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20w_%7BARIMA%7D%20%3D%20%5Cfrac%7B%5Cfrac%7B1%7D%7BMSE_%7BARIMA%7D%7D%7D%7B%5Cfrac%7B1%7D%7BMSE_%7BARIMA%7D%7D%20&plus;%20%5Cfrac%7B1%7D%7BMSE_%7BLM%7D%7D%7D) and ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20w_%7BLM%7D%20%3D%20%5Cfrac%7B%5Cfrac%7B1%7D%7BMSE_%7BLM%7D%7D%7D%7B%5Cfrac%7B1%7D%7BMSE_%7BARIMA%7D%7D%20&plus;%20%5Cfrac%7B1%7D%7BMSE_%7BLM%7D%7D%7D).
+
 After doing this process, we then aggregate the expected values.
 The below image presents a brief interview about the average demand in each scenario. The result of all scenarios has a similar tendency. When the discount rate is higher, the demand is lower. Moreover, compared to the common or unpopular group, the popular group has the highest average demand given any discount rate.
 
