@@ -99,7 +99,29 @@ In next stage, we use Stochastic Dynamic Programming to find the optimized disco
 
 ### Example and Applications
 <!-- give a small and understandable example for python illustration. The example could include dataset, define variables, introduce solver, set up experiments, clarify the numerical analysis result, or provide some managerial implications. -->
-<!-- 1t -->
+we take anonymized datasets and design a scenario to show our research methods. 
+The example product's origin price is NT 3000 and cost is NT 900. This product just can be sold in 9 weeks with no salvage value. 
+The datasets contain 14 months of sales data and three channels' pageview data. 
+For demand estimation, we split datasets into train and test data with the 2021/1/1 as the boundary. 
+
+After simple data preprocessing, we divide the products into three scenarios with K-means considering 4 characteristics: popular (cluster 0), common (cluster 2), and unpopular (cluster 1). The ratio of each kind: 0.22, 0.26, and 0.52, respectively.
+
+![cluster](img/cluster.png)
+Then we use ARIMA and linear regression to estimate the demand distribution in each scenario and period  considering different discount rate.
+Demand probability distribution of each sceario 𝜔 and period 𝑡.
+
+![cluster](img/Demand_distribution.png)
+The below image presents a brief interview about average demand in each scenario. The result of all scenarios have a similar tendency. When the discount rate is higher, the demand is lower. Moreover, compared to a common or unpopular one, popular has highest average demand in each discount rate.
+
+![cluster](img/3_demand.png)
+
+After demand forecasting, we then use two-stage stochastic dynamic programming to determine order quantity and price strategy. We use three two-stage methods. 
+
+![summary](img/summary.png)
+
+As the result, we find EV and recourse have the same order quantity. And, in Scenario Analysis, we find if we guess wrongly as popular, the expected profit will be most less one. Then, we will show the detailed result of each model. For one price strategy, the result is shown on the below picture.
+
+![summary](img/price.png)
 
 ### Comments
 <!-- What’s your comment or insights to the topic/methodologies you introduced? -->
