@@ -1,4 +1,4 @@
-# Demand estimation and dynamic pricing in digital channels:Taking shoes selling as an example
+# Demand estimation and dynamic pricing in digital channels: Taking shoes selling as an example
 
 <!-- 概要：講說不一定的點在哪 -->
 <!-- 使用兩階段 stochastic dynamic Programming 規劃訂貨量和每一期的定價，並以 Arima 和 regression 作為需求估計方法。 -->
@@ -24,6 +24,13 @@ NOTE: This tutorial is only for education purpose. It is not academic study/pape
 | 王逸庭       |   R08725032  |     |
 
 ## Table of Contents
+- [Background and Motivation](#background-and-motivation)
+- [methodology](#methodology)
+  - [demand-estimating](#demand-estimating)
+  - [two-stage-stochastic-dynamic-programming](#two-stage-stochastic-dynamic-programming)
+- [example-and-applications](#example-and-applications)
+- [comments](#comments)
+- [reference](#reference)
 
 ## Background and Motivation
 <!-- Describe the motivation, background, or problem definition (you may refer to the lecture notes in ORA course). -->
@@ -96,7 +103,7 @@ Our implementation details can be found in the section [Example and Applications
 In the first stage, we determine the ordering quantity $`q`$.
 Given the wholesale price of the shoes equals $`W`$ and scenario $`\omega`$, our problem is to maximize the expected profit.
 
-![stage1](img/stage1_LP.jpg =50%x)
+![stage1](img/stage1_LP.jpg)
 
 The first term represents the total cost of purchasing the commodity.
 The second term is the expected revenue of sales given the ordering quantity and scenario.
@@ -112,13 +119,12 @@ However, if the demand exceeds the inventory level, then the inventory level in 
 If all the shoes have been sold out, which is marked as $`a_n = \Delta`$, the current inventory level and the inventory in the next period must both be 0.
 Therefore, the transition probability is 1.
 
-![stage2](img/stage2_DP.jpg =70%x)
+![stage2](img/stage2_DP.jpg)
 
 According to the course material, the typical ways to solve the problem are to transform it into a deterministic equivalent problem (DEP) and obtain the recourse solution, find the expected value solution, and do the scenario analysis.
 Notice that we have a linear programming model in the first stage while a dynamic programming model in the second stage, we cannot directly follow the steps to transform our problem into a DEP formulation.
 Since we only have one decision variable in the first stage, the ordering quantity, we may simply run through all possible values to find the optimal solution of the recourse problem.
 
-<!-- t3 -->
 
 
 ### Example and Applications
