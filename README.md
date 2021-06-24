@@ -25,12 +25,12 @@ NOTE: This tutorial is only for education purpose. It is not academic study/pape
 
 ## Table of Contents
 - [Background and Motivation](#background-and-motivation)
-- [methodology](#methodology)
-  - [demand-estimating](#demand-estimating)
-  - [two-stage-stochastic-dynamic-programming](#two-stage-stochastic-dynamic-programming)
-- [example-and-applications](#example-and-applications)
-- [comments](#comments)
-- [reference](#reference)
+- [Methodology](#methodology)
+  - [Demand Estimating](#demand-estimating)
+  - [Two-stage Stochastic Dynamic Programming](#two-stage-stochastic-dynamic-programming)
+- [Example and Applications](#example-and-applications)
+- [Comments](#comments)
+- [Reference](#reference)
 
 ## Background and Motivation
 <!-- Describe the motivation, background, or problem definition (you may refer to the lecture notes in ORA course). -->
@@ -100,10 +100,10 @@ Our implementation details can be found in the section [Example and Applications
 
 
 ### Two-stage Stochastic Dynamic Programming
-In the first stage, we determine the ordering quantity $`q`$.
+In the first stage, we determine the ordering quantity ![equation](https://latex.codecogs.com/gif.latex?q).
 Given the wholesale price of the shoes equals $`W`$ and scenario $`\omega`$, our problem is to maximize the expected profit.
 
-![stage1](img/stage1_LP.jpg)
+![stage1](img/stage1_LP.jpg){:height="50%" width="50%"}
 
 The first term represents the total cost of purchasing the commodity.
 The second term is the expected revenue of sales given the ordering quantity and scenario.
