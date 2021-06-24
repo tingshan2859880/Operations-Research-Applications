@@ -1,12 +1,13 @@
-# Dynamic Pricing Problem
+# Demand estimation and dynamic pricing in digital channels:Taking shoes selling as an example
 
 <!-- 概要：講說不一定的點在哪 -->
-<!-- 使用兩階段 stochastic dynamic Programming 規劃訂貨量和每一期的定價，並以 Arima 和 regreession 作為需求估計方法。 -->
+<!-- 使用兩階段 stochastic dynamic Programming 規劃訂貨量和每一期的定價，並以 Arima 和 regression 作為需求估計方法。 -->
+
 In a retailing business, pricing is an important problem, and there are various methodologies for a company to make better pricing decisions. 
 Our research focuses on a sport shoes market.
 Particularly, we find the ordering quantity of shoes and dynamically determine their prices in multi-periods.
 The methodologies includes demand estimating and dynamic pricing.
-In the demand estimating part, we apply Linear Regression and Time Series Regression, e.g., ARMA and ARMA, to analyze the historical transaction data.
+In the demand estimating part, we apply Linear Regression and Time Series Regression, i.e., ARIMA, to analyze the historical transaction data.
 In the dynamic pricing part, we implement a two-stage recourse problem with stochastic dynamic programming to optimize the ordering quantity decision and pricing strategy considering different demand scenarios.
 Since the combination of two-stage recourse problem and dynamic programming is less investigated, this topic is worthy of studying.
 This research may contribute to both practice and academia and provide both predictive and prescriptive analytics for our problem.
@@ -84,7 +85,7 @@ The steps of building an ARIMA model are summarized as below.
 Besides, a ARIMA regression model may also include some regressors, which allows us to take other independent variables' impact on the demand into account.
 By doing so, we use this model to generate the prediction result and further build the demand distribution.
 Again, since we do not put our focus on the introduction of the demand estimating method, further details about ARIMA please refer to [here](https://en.wikipedia.org/wiki/Autoregressive_integrated_moving_average).
-Our implemenation details can be found in the section [Example and Applications](#example-and-applications).
+Our implementation details can be found in the section [Example and Applications](#example-and-applications).
 
 
 
@@ -92,30 +93,71 @@ Our implemenation details can be found in the section [Example and Applications]
 
 
 ### Two-stage Stochastic Dynamic Programming
-In the first stage, we determine the ordering quantity.
-In next stage, we use Stochastic Dynamic Programming to find the optimized discount plan and its corresponding expected revenue.
+In the first stage, we determine the ordering quantity $`q`$.
+Given the wholesale price of the shoes equals $`W`$ and scenario $`\omega`$, our problem is to maximize the expected profit.
+
+![stage1](img/stage1_LP.jpg =50%x)
+
+The first term represents the total cost of purchasing the commodity.
+The second term is the expected revenue of sales given the ordering quantity and scenario.
+
+In second stage, we use stochastic dynamic programming to find the optimized discount plan and its corresponding expected revenue.
+Suppose that we have total $`N`$ periods.
+In our stochastic dynamic model, the state is the inventory level $`s_n`$, the action is the discount rate $`a_n`$.
+$`r_n(s_n, a_n, \omega)`$ represents the reward function, which consists of the expected revenue plus the inventory cost.
+$`t_n(s_{n-1}, \omega | s_n, a_n)`$ is the transition probability. 
+Notice that the function $`f^\omega_n(a_n, x)`$ is exactly the demand distribution we just estimated, which represents the probability of selling $`x`$ pairs of shoes given the discount rate $`a_n`$.
+If the demand is smaller than the inventory level, then the transition probability of $`s_n`$ to $`s_{n=1}`$ is $`f^\omega_n(a_n, x)`$.
+However, if the demand exceeds the inventory level, then the inventory level in the next period $`s_{n-1}`$ must be 0, and the transition probability becomes the cumulative probability of $`f^\omega_n(a_n, x)`$ for $`x`$ from current inventory level $`s_n`$ to the maximum selling amount $`q`$.
+If all the shoes have been sold out, which is marked as $`a_n = \Delta`$, the current inventory level and the inventory in the next period must both be 0.
+Therefore, the transition probability is 1.
+
+![stage2](img/stage2_DP.jpg =70%x)
+
+According to the course material, the typical ways to solve the problem are to transform it into a deterministic equivalent problem (DEP) and obtain the recourse solution, find the expected value solution, and do the scenario analysis.
+Notice that we have a linear programming model in the first stage while a dynamic programming model in the second stage, we cannot directly follow the steps to transform our problem into a DEP formulation.
+Since we only have one decision variable in the first stage, the ordering quantity, we may simply run through all possible values to find the optimal solution of the recourse problem.
+
 <!-- t3 -->
 
 
 ### Example and Applications
 
-We take anonymized datasets and design a scenario to show our research methods. 
+We take a anonymized dataset and design a scenario to show our research methods. 
 The example product's origin price is NT 3000 and cost is NT 900. This product just can be sold in 9 weeks with no salvage value. 
-The datasets contain 14 months of sales data and three channels' pageview data. 
-For demand estimation, we split datasets into train and test data with the 2021/1/1 as the boundary. 
+The dataset contains 14 months of sales data and three channels' pageview data. 
+For demand estimation, we split the dataset into the training and testing data with 2021/1/1 as a cutting boundary. 
 
-After simple data preprocessing, we divide the products into three scenarios with K-means considering 4 characteristics: popular (cluster 0), common (cluster 2), and unpopular (cluster 1). The ratio of each kind: 0.22, 0.26, and 0.52, respectively.
-
+After simple data preprocessing, we divide the products into three scenarios with K-means considering 4 characteristics, which are the total sales (售出總數), sales count (售出次數), sales
+length (販售時間), and origin price (建議售價).
+The three scenarios are then popular (cluster 0), common (cluster 2), and unpopular (cluster 1), and the ratio of each kind are 0.22, 0.26, and 0.52, respectively.
 ![cluster](img/cluster.png)
-Then we use ARIMA and linear regression to estimate the demand distribution in each scenario and period considering the different discount rates.
-Demand probability distribution of each scenario 𝜔 and period 𝑡.
 
-![cluster](img/Demand_distribution.png)
-The below image presents a brief interview about the average demand in each scenario. The result of all scenarios has a similar tendency. When the discount rate is higher, the demand is lower. Moreover, compared to a common or unpopular one, popular has the highest average demand in each discount rate.
+As aforementioned, we assume that our demand distributions all follow Poisson distribution.
+We then use ARIMA and linear regression to estimate the expected value ($`\lambda`$) of the demand distribution in each scenario 𝜔 and period 𝑡 considering different discount rates.
+In the linear regression model, the independent variables include "price", "page views", and "whether there are holidays within seven days before and after the day". 
+In the ARIMA model, we set the range of parameter $`p`$ and $`q`$ are in the range of 1 to 3.
+In order not to ignore the impact of the price, we also include "price" and "page views" as the regressors in the ARIMA model.
+By following the steps we mentioned in the previous section, we obtain the model with the smallest AIC.
+
+We them easily combine the predictions from the two models by calculating the weighted average.
+The weights are generated by the mean squared error (MSE) of the two models.
+Since MSE is a the-smaller-the better criteria, we may transform the MSE by using the following formula:
+```math
+    w_{ARIMA} = \frac{\frac{1}{MSE_{ARIMA}}}{\frac{1}{MSE_{ARIMA}} + \frac{1}{MSE_{LM}}} \quad \mbox{and} \quad w_{LM} = \frac{\frac{1}{MSE_{LM}}}{\frac{1}{MSE_{ARIMA}} + \frac{1}{MSE_{LM}}}
+```
+After doing this process, we then aggregate the expected values.
+The below image presents a brief interview about the average demand in each scenario. The result of all scenarios has a similar tendency. When the discount rate is higher, the demand is lower. Moreover, compared to the common or unpopular group, the popular group has the highest average demand given any discount rate.
 
 ![cluster](img/3_demand.png)
 
-After demand forecasting, we then use two-stage stochastic dynamic programming to determine order quantity and price strategy. We use three two-stage methods. 
+The below table shows an example of the demand distribution for a specific scenario and period.
+Given a discount rate and a amount of demand, we obtain the corresponding probability according to the table.
+<!-- The Demand probability distribution of each scenario 𝜔 and period 𝑡. -->
+
+![cluster](img/Demand_distribution.png)
+
+After the demand estimating, we then use two-stage stochastic dynamic programming to determine the order quantity and pricing strategy. We use three kinds of two-stage models to solve our problem and compare their performance. 
 
 <img src=img/summary.png width="400" />
 
