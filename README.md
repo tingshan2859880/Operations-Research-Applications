@@ -117,7 +117,7 @@ The below image presents a brief interview about average demand in each scenario
 
 After demand forecasting, we then use two-stage stochastic dynamic programming to determine order quantity and price strategy. We use three two-stage methods. 
 
-<div style="display: flex; justify-content: center;"><img src=img/summary.png style="width:55%;height:75;"/></div>
+<div style="display: flex; justify-content: center;"><img src=img/summary.png style="width:35%;"/></div>
 
 As the result, we find EV and recourse have the same order quantity. And, in Scenario Analysis, we find if we guess wrongly as popular, the expected profit will be most less one. Then, we will show the detailed result of each model. For one price strategy, the result is shown on the below picture.
 
