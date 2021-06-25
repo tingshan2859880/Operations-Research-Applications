@@ -15,7 +15,10 @@ from .plot import *
 path = DirConfig()
 
 
-def do_cluster(num=3):
+def do_cluster(num=3) ->(pd.DataFrame, list):
+    '''
+    讀取資料和分群
+    '''
     # read data
     flow_dic, trans_dic, trans_data = read_data()
     trans_data['建議售價'] = trans_data['建議售價'].apply(str)
@@ -27,7 +30,24 @@ def do_cluster(num=3):
     return trans_with_cluster, [flow_dic, trans_dic, trans_data]
 
 
-def predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_solds, data_list, start_date, end_date, discount_rate=np.arange(0.5, 1, 0.1), origin_price=2880, min_sold=0, rerun=False, debug_mode=True):
+def predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_solds, data_list, start_date, end_date, discount_rate=np.arange(0.5, 1, 0.1), origin_price=2880, min_sold=0, rerun=False, debug_mode=True) -> (dict, dict):
+    '''
+    estimate each sceanrio demand distribution in each period
+    Args:
+        trans_with_cluster_item:  index is item id
+        trans_with_cluster_group:  index is group id
+        data_list: dict() including pageview, origin transaction data, origin channel transaction data
+        start_date: estimation state date
+        end_date: estimation end date
+        discount_rate: list() all possible discount rate
+        origin_price: product price
+        min_sold: min number for one period
+        rerun: retrain the model
+        debug_mode: print detail information
+    Output:
+        demand_prob: each scenario demand distribution
+        demand_exp:
+    '''
     if not rerun:
         return pd.read_pickle(path.to_new_output_file('demand_prob.pkl')), None
 
@@ -153,7 +173,10 @@ def predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_s
 
     return demand_prob, demand_exp
 
-def caculate_expected_revenue(cluster_kinds, buy_num, probs, demand_dic, origin_price, period_num, prom_rate_list, buy_cost):
+def caculate_expected_revenue(cluster_kinds, buy_num, probs, demand_dic, origin_price, period_num, prom_rate_list, buy_cost) -> int:
+    '''
+    calculate the expected revenure considering all scenario probs
+    '''
     buy_rev_ev = 0
     for k in cluster_kinds:
         model = DynamicProgramming(demand_dic[k], prom_rate_list, buy_num, min(100, buy_num), origin_price, period_num=period_num)
@@ -161,11 +184,14 @@ def caculate_expected_revenue(cluster_kinds, buy_num, probs, demand_dic, origin_
         buy_rev_ev += rev*probs[k]
     return buy_rev_ev
 
-def main(clus_num=3, mode='EV'):
+def main(clus_num=3, mode='EV')->dict:
     print('mode:', mode)
     '''
     Args:
-        mode:使用哪一種方法（EV/SA/DEP）
+        mode: the two-stage model（EV / SA / DEP(recourse)）
+        clus_num: cluster number
+    output:
+        total_buy_name: all result about buy number and expected profit
     '''
     # parameters setting
     origin_price = 3000
@@ -177,21 +203,20 @@ def main(clus_num=3, mode='EV'):
     period_num = math.floor((end_date-start_date).days/7)
     buy_cost = 900
 
-    trans_with_cluster_group, data_list = do_cluster(3)
-    # print(trans_cluster[['group_name', 'cluster_kind']])
+    # use historical data
+    trans_with_cluster_group, data_list = do_cluster(clus_num)
     cluster_group_dic = {v['group_name'].values[0]: v['cluster_kind'].values[0]
                          for i, v in trans_with_cluster_group[['group_name', 'cluster_kind']].iterrows()}
-    # print(cluster_group_dic)
     data_list[2]['cluster_kind'] = data_list[2]['group_name'].map(
         cluster_group_dic)
-    # print(data_list[2])
     cluster_id_dic = {v['貨號']: v['cluster_kind'] for i, v in data_list[2][[
         'cluster_kind', '貨號']].drop_duplicates().iterrows()}
-    # print(cluster_id_dic)
     trans_with_cluster_item = data_list[2][['數量', '貨號']].groupby(
         '貨號').agg({'數量': sum}).reset_index()
     trans_with_cluster_item['cluster_kind'] = trans_with_cluster_item['貨號'].map(
         cluster_id_dic)
+    
+    # order quantity range setting
     max_percent = 0.95
     min_percent = 0.05
     probs = trans_with_cluster_item[['cluster_kind', '貨號']].groupby(
@@ -213,10 +238,15 @@ def main(clus_num=3, mode='EV'):
                 trans_with_cluster_item.loc[trans_with_cluster_item['cluster_kind'] == k, '數量'].quantile(max_percent))
             min_solds[k] = int(
                 trans_with_cluster_item.loc[trans_with_cluster_item['cluster_kind'] == k, '數量'].quantile(min_percent))
+    
+    # demand estimation
     demand_dic, _ = predict_demand_dist(trans_with_cluster_item, trans_with_cluster_group, max_solds, data_list, start_date=datetime(
         2021, 1, 1), end_date=datetime(2021, 3, 8), discount_rate=discount_rate, origin_price=origin_price)
     prom_rate_list = list(demand_dic[0][1].keys())
-    if mode == 'EV':
+
+    # different mode have different demand distribution
+    # two-stage stochastic dynamic model
+    if mode == 'EV':  # expected value
         ev_demand_dic = {}
         for t in demand_dic[0].keys():
             ev_demand_dic[t] = {}
@@ -232,7 +262,7 @@ def main(clus_num=3, mode='EV'):
         print('購買量：', buy_num)
         total_buy_name = {}
         total_buy_name['EV'] = [buy_num, caculate_expected_revenue(cluster_kinds, buy_num, probs, demand_dic, origin_price, period_num, prom_rate_list, buy_cost)]
-    elif mode == 'DEP':
+    elif mode == 'DEP':  # recourse
         total_buy_name = {}
         buy_rev_ev = {}
         total_buy_name[-1] = [probs[i] for i in probs] + [1]
@@ -266,18 +296,11 @@ def main(clus_num=3, mode='EV'):
         pd.DataFrame([[buy_num]*len(cluster_kinds+1), [probs[i] for i in probs] + [1], revs+[buy_rev_ev[buy_num]]],
                      index=['訂購量', '機率', 'revenue'], columns=list(cluster_kinds)+['expected']).to_excel(path.to_new_output_file('DEP_best_ev.xlsx'))
 
-    else:
+    else:  # SA
         total_buy_name_ev = {}
         total_buy_name = {}
         for k, v in demand_dic.items():
             print("demand distribution of cluster", k)
-            # print(v)
-            # print(v.keys())
-            print("-")
-            # max_q = int(
-            #     trans_with_cluster_item.loc[trans_with_cluster_item['cluster_kind'] == k, '數量'].quantile(0.95))
-            # min_q = int(
-            #     trans_with_cluster_item.loc[trans_with_cluster_item['cluster_kind'] == k, '數量'].quantile(0.05))
             buy_num, model = find_best_quantity(
                 v, max_sold, origin_price, period_num, buy_cost, max_q=max_solds[k], min_q=min_solds[k], interval=10)
             print(buy_num, model.total_reward)

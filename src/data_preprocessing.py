@@ -46,8 +46,13 @@ def train_test_split(data):
 
 
 def cluster(transaction_data, num=3):
+    '''
+    以 K-means 區分 demand scenario
+    Args:
+        transaction_data: 銷售資料
+        num: cluster number
+    '''
     transaction_data['建議售價'] = transaction_data['建議售價'].apply(str)
-    # transaction_data['group_name'] = transaction_data['貨號']
     transaction_data['group_name'] = transaction_data[[
         '品牌', '性別', '建議售價']].agg('-'.join, axis=1)
     transaction_data['建議售價'] = transaction_data['建議售價'].apply(int)
@@ -55,14 +60,15 @@ def cluster(transaction_data, num=3):
         {'數量': ['count', 'sum'], '單據日期': ['min', 'max'], '建議售價': 'mean'}).reset_index()
     ttl_num_df['販售時間'] = (ttl_num_df['單據日期']['max'] -
                           ttl_num_df['單據日期']['min']).dt.days
+    # 區分的欄位
     filters = ['數量', '販售時間', '建議售價']
     X = ttl_num_df[filters].values
     kmeans = KMeans(n_clusters=num, random_state=0).fit(X)
-
+    # plot
     fig, axes = plt.subplots(1, 3, figsize=(9, 4), sharey=False, sharex=False)
     df = pd.DataFrame(X, columns=['售出次數', '售出總數', '販售時間', '建議售價'])
     df['cluster'] = kmeans.labels_
-    # print(df)
+
     sns.scatterplot(y="售出次數", x="售出總數", data=df,  hue='cluster', ax=axes[0])
     sns.scatterplot(y="售出次數", x="販售時間", data=df,  hue='cluster', ax=axes[1])
     sns.scatterplot(y="售出總數", x="建議售價", data=df,  hue='cluster', ax=axes[2])
@@ -82,8 +88,6 @@ def read_data(channel=['A', 'B', 'C']):
     sales_all = pd.read_excel(path.to_new_file('Sales_data.xlsx'))
     sales_all['折數'] = round(sales_all['單價'] / sales_all['建議售價'], 1)
     sales_all = sales_all.loc[sales_all['建議售價'] < 5000]
-    # print("折數", sales_all['折數'])
-    # print(np.mean(sales_all['折數']))
     for c in channel:
         flow[c] = pd.read_excel(path.to_new_file(c+'_流量資料.xlsx'))
 
