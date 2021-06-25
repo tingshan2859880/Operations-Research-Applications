@@ -30,7 +30,7 @@ NOTE: This tutorial is only for education purpose. It is not academic study/pape
   - [Two-stage Stochastic Dynamic Programming](#two-stage-stochastic-dynamic-programming)
 - [Example and Applications](#example-and-applications)
 - [Comments](#comments)
-- [Started] (#started)
+- [Started](#started)
 - [Reference](#reference)
 
 ## Background and Motivation
