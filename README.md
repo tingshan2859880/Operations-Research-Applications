@@ -123,7 +123,7 @@ Finally, the optimality equation of period ![equation](https://latex.codecogs.co
 Besides, we suppose that the salvage value equals zero.
 Below shows our complete formulation of the second stage DP problem.
 
-<img src="img/stage2_DP.jpg" width="500">
+<img src="img/stage2_DP.jpg" width="700">
 
 According to the course material, the typical ways to solve the problem are to transform it into a deterministic equivalent problem (DEP) and obtain the recourse solution, find the expected value solution, and do the scenario analysis.
 Notice that we have a linear programming model in the first stage while a dynamic programming model in the second stage, we cannot directly follow the steps to transform our problem into a DEP formulation.
