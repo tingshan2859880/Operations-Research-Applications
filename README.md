@@ -120,6 +120,7 @@ However, if the demand exceeds the inventory level, then the inventory level in 
 If all the shoes have been sold out, which is marked as ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20a_n%20%3D%20%5CDelta), the current inventory level and the inventory in the next period must both be 0.
 Therefore, the transition probability is 1.
 Finally, the optimality equation of period ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20n) is ![equation](https://latex.codecogs.com/png.latex?%5Cbg_white%20V_n%28s_n%2C%20%5Comega%29), which equals the expected revenue of the current period plus the expected revenue from future periods.
+Besides, we suppose that the salvage value equals zero.
 Below shows our complete formulation of the second stage DP problem.
 
 <img src="img/stage2_DP.jpg" width="500">
@@ -133,7 +134,8 @@ Since we only have one decision variable, the ordering quantity, in the first st
 ### Example and Applications
 
 We take a anonymized dataset and design a scenario to show our research methods. 
-The example product's origin price is NTD 3000 and cost is NTD 900. This product just can be sold in 9 weeks with no salvage value. 
+The example product's origin price is NTD 3000 and cost is NTD 900, and the possible discount rates are 0.4, 0.5, 0.6, ..., 1.0..
+This product just can be sold in 9 weeks with no salvage value.
 The dataset contains 14 months of sales data and three channels' pageview data. 
 For demand estimation, we split the dataset into the training and testing data with 2021/1/1 as a cutting boundary. 
 
@@ -177,15 +179,15 @@ We then show the detailed result by taking the EV solution as an example. Given 
 ![summary](img/price.png)
 
 Our result provides reasonable decision suggestions.
-According to the above table and graph, we observe that when the left period is larger or when the inventory level is smaller, the discount rate can be set higher, i.e. the shoes is more expensive.
+According to the above table and graph, we observe that when the left period is larger or when the inventory level is smaller, the discount rate can be set higher, i.e. the shoes are more expensive.
 
 ### Comments
 
-We provide a methodology that combines the ordering quality and dynamic pricing decisions. The method combines prescriptive and predictive analysis of the dynamic pricing problem, and we solve the problem by doing demand estimation and stochastic dynamic programming. About the demand estimation methodologies, we use typical linear regression and ARIMA considering the influence of time trend.
+We provide a methodology that considers the ordering quality and dynamic pricing decisions. The method combines prescriptive and predictive analysis of the dynamic pricing problem, and we solve the problem by doing demand estimation and stochastic dynamic programming. About the demand estimation methodologies, we use typical linear regression and ARIMA considering the influence of time trend.
 About two-stage stochastic dynamic programming methodology, we try to plan a product's best ordering quantity and the pricing strategy.
 In the first stage, we formulate profit maximization linear programming model to solve the ordering quantity.
 In the second stage, we formulate a stochastic dynamic programming model to determine the discounting plan for multiple periods.
-We take the salvage value, demand fluctuation, and inventory cost into account to find an optimal pricing strategy.
+We take the stochastic demand and inventory cost into account to find an optimal pricing strategy.
 We finally compare the planning results of three kinds of two-stage models, which are the recourse, EV, and scenario analysis solution, and the main differences among them is the concatenate way of the two stages.
 <!-- About how to concatenate the two stages calculation, we use three models and compare the results.  -->
 
