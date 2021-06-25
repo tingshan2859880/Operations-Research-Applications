@@ -30,6 +30,7 @@ NOTE: This tutorial is only for education purpose. It is not academic study/pape
   - [Two-stage Stochastic Dynamic Programming](#two-stage-stochastic-dynamic-programming)
 - [Example and Applications](#example-and-applications)
 - [Comments](#comments)
+- [Started] (#started)
 - [Reference](#reference)
 
 ## Background and Motivation
@@ -196,9 +197,19 @@ These directions call for further investigation.
 <!-- backlogging into the stochastic model.  -->
 
 
+### Started
+Install
 
+```
+python=3.8
+pip install -r requirements.txt
 
+```
+Run
+```
+python3 -m src.main
 
+```
 
 ### Reference
 <!-- Show all your reference cited in your GitHub page. -->
